@@ -58,16 +58,16 @@ comment thread as is.
 model    Qwen3.5-9B-Q4_K_M.gguf, 8.95 B, 5.28 GiB, llama.cpp b9430
 gpu      ENGAGED: 33/33 layers on GPU (Metal: Apple M5)
                  prefill         decode      wallclock
-  pass 1     584.2 tok/s     18.5 tok/s     11.9 tok/s
-  pass 2     591.5 tok/s     20.3 tok/s     14.7 tok/s
-where pass 1 went (10.6 s wall, 4/10 threads)
-  load weights    1.7 s  #####.......................   16%
-  prefill         1.3 s  ###.........................   12%
-  decode          6.9 s  ##################..........   65%
-  engine misc     0.8 s  ##..........................    7%
+  pass 1     596.6 tok/s     20.7 tok/s     13.1 tok/s
+  pass 2     589.0 tok/s     21.6 tok/s     15.5 tok/s
+where pass 1 went (9.7 s wall, 4/10 threads)
+  load weights    1.7 s  #####.......................   17%
+  prefill         1.3 s  ####........................   13%
+  decode          6.1 s  ##################..........   63%
+  engine misc     0.6 s  ##..........................    6%
 VERDICT: HEALTHY
-  The GPU did the work. Quote decode (20.3 tok/s) when you
-  compare setups. 591 tok/s is real too, but it is prefill:
+  The GPU did the work. Quote decode (21.6 tok/s) when you
+  compare setups. 589 tok/s is real too, but it is prefill:
   reading speed, not writing speed.
 -- picchio v0.1.0 on Apple M5, 32 GB, macOS 26.5.1
 ```
@@ -80,8 +80,8 @@ them together or averages them.
 Prefill is how fast the model reads your prompt. Decode is how fast it
 writes the answer. Wallclock is generated tokens divided by everything,
 load and warmup included, which is what your stopwatch and your gut
-measure. On the machine above these are about 590, 20 and 15 in the same
-run. On the CPU run below they are 25, 11 and 3. A single unlabeled
+measure. On the machine above these are 589, 21.6 and 15.5 in the same
+pass. On the CPU run below they are 26, 11 and 3. A single unlabeled
 number spanning a 30x range is not a measurement, it is a rumor.
 
 When a screenshot shows a Mac doing 500 tok/s, that is almost always
@@ -93,7 +93,7 @@ lives in.
 
 ## The number everyone posts cannot see your bottleneck
 
-Measured here, the GPU buys about 2x on decode and about 24x on prefill
+Measured here, the GPU buys about 2x on decode and about 23x on prefill
 (both runs are in [examples/](examples/), 4 of 10 cpu threads on the CPU
 side). Nearly every tok/s figure posted online is decode, because decode
 is the one that feels like typing speed. But on consumer hardware the
@@ -112,22 +112,22 @@ Same machine, same model, same file, forced to CPU
 model    Qwen3.5-9B-Q4_K_M.gguf, 8.95 B, 5.28 GiB, llama.cpp b9430
 gpu      NOT ENGAGED: 0/33 layers on GPU
                  prefill         decode      wallclock
-  pass 1      24.8 tok/s     10.7 tok/s      2.7 tok/s
-  pass 2      24.9 tok/s     10.8 tok/s      2.8 tok/s
-where pass 1 went (47.9 s wall, 4/10 threads, weights cached)
-  load weights    4.4 s  ###.........................    9%
-  prefill        30.7 s  ##################..........   64%
-  decode         11.8 s  #######.....................   25%
-  engine misc     0.9 s  #...........................    2%
+  pass 1      26.7 tok/s     12.1 tok/s      3.1 tok/s
+  pass 2      25.9 tok/s     11.0 tok/s      2.9 tok/s
+where pass 1 went (41.3 s wall, 4/10 threads, weights cached)
+  load weights    1.9 s  #...........................    5%
+  prefill        28.5 s  ###################.........   69%
+  decode         10.5 s  #######.....................   25%
+  engine misc     0.4 s  ............................    1%
 VERDICT: SILENT CPU FALLBACK
-  0 of 33 layers reached the GPU. Decode (10.8 tok/s) looks
-  passable, which is how this hides. Prefill at 25 tok/s puts a
-  2500 token prompt 101 s from its first word. Check -ngl.
+  0 of 33 layers reached the GPU. Decode (11.0 tok/s) looks
+  passable, which is how this hides. Prefill at 26 tok/s puts a
+  2500 token prompt 96 s from its first word. Check -ngl.
 -- picchio v0.1.0 on Apple M5, 32 GB, macOS 26.5.1
 ```
 
 Look at what moved and what did not. Decode dropped 2x, which in a chat
-you might shrug at. Prefill dropped 24x, and the first word of a long
+you might shrug at. Prefill dropped 23x, and the first word of a long
 prompt now takes minutes. picchio calls this from two directions at
 once: the engine's own layer placement log (0/33 offloaded) and the
 prefill signature. You can reproduce this verdict on any Apple Silicon
@@ -146,21 +146,25 @@ posts a tok/s figure, or you remember one, and you want to know what it
 probably was:
 
 ```
-python3 picchio.py model.gguf --explain 36
+python3 picchio.py --explain 36
 ```
 
 ```
 YOUR NUMBER: 36.0 tok/s -> MATCHES NOTHING MEASURED HERE
   36.0 tok/s is not within 30% of anything measured here
-  (closest: decode, off by 1.8x; measured: prefill 584.2, decode
-  20.0, wallclock 14.7 tok/s). Before trusting that number, ask
+  (closest: decode, off by 1.7x; measured: prefill 589.0, decode
+  21.6, wallclock 15.5 tok/s). Before trusting that number, ask
   which of the three rates it was, and on what hardware, quant,
   and context length.
+(rates: Qwen3.5-9B-Q4_K_M.gguf, Apple M5, 32 GB, 2026-07-11)
 ```
 
 That 36 is the exact number from the story above, asked against the
-machine it supposedly came from. After a diagnostic run picchio caches
-the rates, so later you can call `--explain` alone without rerunning.
+machine it supposedly came from. This short check is its own output,
+deliberately not a verdict block: picchio caches the rates from your
+last diagnostic run, so the check needs no rerun. Pass `--explain`
+together with a model path instead and the same section is appended
+under a full verdict block, one run for both.
 
 ## Ollama mode
 
@@ -178,16 +182,16 @@ Real run, same weights imported into ollama
 model    qwen3.5:9b, 9.0 B, Q4_K_M, 5.55 GiB, ollama 0.31.1
 gpu      ENGAGED: 100% of weights in GPU memory (ollama ps)
                  prefill         decode      wallclock
-  pass 1     513.1 tok/s     18.5 tok/s     12.9 tok/s
-  pass 2     768.6 tok/s     19.5 tok/s     16.5 tok/s
-where pass 1 went (9.9 s wall)
-  load weights    1.5 s  ####........................   15%
-  prefill         1.5 s  ####........................   15%
-  decode          6.9 s  ####################........   70%
+  pass 1     509.9 tok/s     18.8 tok/s     11.9 tok/s
+  pass 2     835.5 tok/s     19.1 tok/s     16.4 tok/s
+where pass 1 went (10.8 s wall)
+  load weights    2.5 s  ######......................   23%
+  prefill         1.5 s  ####........................   14%
+  decode          6.8 s  ##################..........   63%
   engine misc     0.0 s  ............................    0%
 VERDICT: HEALTHY
   Ollama reports 100% of weights in GPU memory. Quote decode
-  (19.5 tok/s) when you compare setups. 769 tok/s is prefill:
+  (19.1 tok/s) when you compare setups. 836 tok/s is prefill:
   reading, not writing.
 -- picchio v0.1.0 on Apple M5, 32 GB, macOS 26.5.1
 ```
@@ -231,13 +235,16 @@ roughly 730 prompt tokens and 128 generated tokens per pass. Ranges are
 min to max across the recorded runs in [examples/](examples/). Every
 number in this table came out of a real run on this hardware; there are
 no projected or extrapolated numbers anywhere in this repo, and rows
-for hardware I do not own stay empty until someone runs it there.
+for hardware I do not own stay empty until someone runs it there. The
+unedited engine output behind each example sits in
+[examples/raw/](examples/raw/), written by the `--keep-logs` flag: the
+verdict quotes the numbers, the log is where they came from.
 
 | config                          | prefill tok/s | decode tok/s | wallclock tok/s |
 |---------------------------------|---------------|--------------|-----------------|
-| Qwen3.5-9B Q4_K_M, Metal 33/33  | 584.2 - 591.5 | 18.5 - 20.3  | 11.9 - 14.7     |
-| Qwen3.5-9B Q4_K_M, CPU 0/33     | 24.8 - 24.9   | 10.7 - 10.8  | 2.7 - 2.8       |
-| qwen3.5:9b via ollama, 100% GPU | 513.1 - 768.6 | 18.5 - 19.5  | 12.9 - 16.5     |
+| Qwen3.5-9B Q4_K_M, Metal 33/33  | 589.0 - 596.6 | 20.7 - 21.6  | 13.1 - 15.5     |
+| Qwen3.5-9B Q4_K_M, CPU 0/33     | 25.9 - 26.7   | 11.0 - 12.1  | 2.9 - 3.1       |
+| qwen3.5:9b via ollama, 100% GPU | 509.9 - 835.5 | 18.8 - 19.1  | 11.9 - 16.4     |
 
 Load time for the 5.28 GiB file: 3.3 s the first time it was ever read,
 1.7 s after a cache flush, 0.4 s when the weights were still in the disk
@@ -259,8 +266,8 @@ misreads machines it has never met is just a mirror with opinions.
 
 | chip     | ram   | model, engine                      | prefill | decode | wallclock | verdict |
 |----------|-------|------------------------------------|---------|--------|-----------|---------|
-| Apple M5 | 32 GB | Qwen3.5-9B Q4_K_M, llama.cpp b9430 | 591.5   | 20.3   | 14.7      | HEALTHY |
-| Apple M5 | 32 GB | qwen3.5:9b, ollama 0.31.1          | 768.6   | 19.5   | 16.5      | HEALTHY |
+| Apple M5 | 32 GB | Qwen3.5-9B Q4_K_M, llama.cpp b9430 | 589.0   | 21.6   | 15.5      | HEALTHY |
+| Apple M5 | 32 GB | qwen3.5:9b, ollama 0.31.1          | 835.5   | 19.1   | 16.4      | HEALTHY |
 |          |       |                                    |         |        |           |         |
 |          |       |                                    |         |        |           |         |
 |          |       |                                    |         |        |           |         |

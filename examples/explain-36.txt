@@ -1,21 +1,7 @@
-model    Qwen3.5-9B-Q4_K_M.gguf, 8.95 B, 5.28 GiB, llama.cpp b9430
-gpu      ENGAGED: 33/33 layers on GPU (Metal: Apple M5)
-                 prefill         decode      wallclock
-  pass 1     589.9 tok/s     20.2 tok/s     14.7 tok/s
-  pass 2     584.2 tok/s     20.0 tok/s     14.7 tok/s
-where pass 1 went (8.6 s wall, 4/10 threads, weights cached)
-  load weights    0.4 s  #...........................    4%
-  prefill         1.3 s  ####........................   15%
-  decode          6.3 s  ####################........   73%
-  engine misc     0.7 s  ##..........................    8%
-VERDICT: HEALTHY
-  The GPU did the work. Quote decode (20.0 tok/s) when you
-  compare setups. 584 tok/s is real too, but it is prefill:
-  reading speed, not writing speed.
 YOUR NUMBER: 36.0 tok/s -> MATCHES NOTHING MEASURED HERE
   36.0 tok/s is not within 30% of anything measured here
-  (closest: decode, off by 1.8x; measured: prefill 584.2, decode
-  20.0, wallclock 14.7 tok/s). Before trusting that number, ask
+  (closest: decode, off by 1.7x; measured: prefill 589.0, decode
+  21.6, wallclock 15.5 tok/s). Before trusting that number, ask
   which of the three rates it was, and on what hardware, quant,
   and context length.
--- picchio v0.1.0 on Apple M5, 32 GB, macOS 26.5.1
+(rates: Qwen3.5-9B-Q4_K_M.gguf, Apple M5, 32 GB, 2026-07-11)

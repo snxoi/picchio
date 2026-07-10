@@ -156,7 +156,18 @@ def engine_version(binpath):
     return os.path.basename(binpath)
 
 
-def run_llama_pass(binpath, model, extra_args):
+def keep_log(path, text):
+    if not path:
+        return
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w") as f:
+            f.write(text)
+    except OSError as e:
+        sys.stderr.write("picchio: could not write {}: {}\n".format(path, e))
+
+
+def run_llama_pass(binpath, model, extra_args, log_path=None):
     base = [
         binpath,
         "-m", model,
@@ -188,6 +199,7 @@ def run_llama_pass(binpath, model, extra_args):
             sys.exit("picchio: engine run exceeded 30 minutes, giving up.")
         wall_s = time.monotonic() - t0
         if r.returncode == 0:
+            keep_log(log_path, r.stderr)
             return parse_stderr(r.stderr, wall_s)
         last = r
     tail = "\n".join(last.stderr.strip().splitlines()[-6:])
@@ -291,7 +303,7 @@ def ollama_ps_entry(tag):
     return None
 
 
-def run_ollama_pass(tag):
+def run_ollama_pass(tag, log_path=None):
     t0 = time.monotonic()
     resp = ollama_api("/api/generate", {
         "model": tag,
@@ -300,6 +312,7 @@ def run_ollama_pass(tag):
         "options": {"num_predict": N_PREDICT, "num_ctx": CTX, "seed": 7},
     })
     wall_s = time.monotonic() - t0
+    keep_log(log_path, json.dumps(resp, indent=1))
     d = blank_pass()
     d["wall_s"] = wall_s
     ns = 1e6  # ns -> ms
@@ -585,6 +598,9 @@ def main():
                          "this machine's measured rates")
     ap.add_argument("--json", action="store_true",
                     help="print raw measurements as JSON after the verdict")
+    ap.add_argument("--keep-logs", metavar="DIR",
+                    help="save the raw engine output of each pass into DIR "
+                         "(the evidence behind the verdict)")
     ap.add_argument("extra", nargs="*", default=[],
                     help="args after -- go straight to the llama.cpp engine "
                          "(e.g. -- --device none -ngl 0)")
@@ -598,8 +614,9 @@ def main():
         verdict, para = classify_number(args.explain, cached["rates"])
         print("YOUR NUMBER: {:.1f} tok/s -> {}".format(args.explain, verdict))
         print("\n".join(wrap_para(para)))
-        print("(rates from {} on {})".format(
-            cached.get("model_name", "?"), cached.get("stamp", "?")))
+        print("(rates: {}, {}, {})".format(
+            cached.get("model_name", "?"), cached.get("machine", "?"),
+            str(cached.get("stamp", "?"))[:10]))
         return
 
     if args.model is None:
@@ -608,15 +625,21 @@ def main():
 
     mach = machine_info()
 
+    logdir = args.keep_logs
+    lp = (lambda name: os.path.join(logdir, name)) if logdir else \
+        (lambda name: None)
+
     if os.path.isfile(args.model):
         mode = "llama.cpp"
         binpath = find_binary(args.bin)
         engine_str = "llama.cpp " + engine_version(binpath)
         model_name = os.path.basename(args.model)
         sys.stderr.write("picchio: pass 1 (includes any cold load) ...\n")
-        p1 = run_llama_pass(binpath, args.model, args.extra)
+        p1 = run_llama_pass(binpath, args.model, args.extra,
+                            lp("pass1.stderr.txt"))
         sys.stderr.write("picchio: pass 2 (warm) ...\n")
-        p2 = run_llama_pass(binpath, args.model, args.extra)
+        p2 = run_llama_pass(binpath, args.model, args.extra,
+                            lp("pass2.stderr.txt"))
     else:
         ver = ollama_reachable()
         if not ver:
@@ -638,9 +661,9 @@ def main():
                              "pass 1 ...\n")
             ollama_unload(args.model)
         sys.stderr.write("picchio: pass 1 (includes any cold load) ...\n")
-        p1 = run_ollama_pass(args.model)
+        p1 = run_ollama_pass(args.model, lp("pass1.response.json"))
         sys.stderr.write("picchio: pass 2 (warm) ...\n")
-        p2 = run_ollama_pass(args.model)
+        p2 = run_ollama_pass(args.model, lp("pass2.response.json"))
 
     cold_note = None
     l1, l2 = p1["load_ms"], p2["load_ms"]
@@ -666,6 +689,7 @@ def main():
     save_cache({
         "stamp": time.strftime("%Y-%m-%d %H:%M"),
         "model_name": model_name,
+        "machine": "{}, {} GB".format(mach["chip"], mach["ram_gb"] or "?"),
         "rates": rates,
         "state": state,
     })

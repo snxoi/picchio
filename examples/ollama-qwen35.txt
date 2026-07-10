@@ -1,15 +1,15 @@
 model    qwen3.5:9b, 9.0 B, Q4_K_M, 5.55 GiB, ollama 0.31.1
 gpu      ENGAGED: 100% of weights in GPU memory (ollama ps)
                  prefill         decode      wallclock
-  pass 1     513.1 tok/s     18.5 tok/s     12.9 tok/s
-  pass 2     768.6 tok/s     19.5 tok/s     16.5 tok/s
-where pass 1 went (9.9 s wall)
-  load weights    1.5 s  ####........................   15%
-  prefill         1.5 s  ####........................   15%
-  decode          6.9 s  ####################........   70%
+  pass 1     509.9 tok/s     18.8 tok/s     11.9 tok/s
+  pass 2     835.5 tok/s     19.1 tok/s     16.4 tok/s
+where pass 1 went (10.8 s wall)
+  load weights    2.5 s  ######......................   23%
+  prefill         1.5 s  ####........................   14%
+  decode          6.8 s  ##################..........   63%
   engine misc     0.0 s  ............................    0%
 VERDICT: HEALTHY
   Ollama reports 100% of weights in GPU memory. Quote decode
-  (19.5 tok/s) when you compare setups. 769 tok/s is prefill:
+  (19.1 tok/s) when you compare setups. 836 tok/s is prefill:
   reading, not writing.
 -- picchio v0.1.0 on Apple M5, 32 GB, macOS 26.5.1

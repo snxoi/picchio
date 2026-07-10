@@ -1,0 +1,29 @@
+picchio v0.1.0 .................................. 2026-07-11 02:56
+machine   Apple M5, 32 GB ram, macOS 26.5.1
+engine    llama.cpp build 9430 (d48a56eff), 4 of 10 cpu threads
+model     Qwen3.5-9B-Q4_K_M.gguf, 8.95 B params, 5.28 GiB on disk
+gpu       ENGAGED: 33/33 layers on GPU (Metal: Apple M5)
+
+                   prefill          decode       wallclock
+  pass 1       559.5 tok/s      19.5 tok/s      13.9 tok/s
+  pass 2       567.9 tok/s      18.4 tok/s      13.1 tok/s
+
+where pass 1 went (9.1 s wall)
+  load weights    0.4 s  #...........................    5%
+  prefill         1.4 s  ####........................   15%
+  decode          6.5 s  ####################........   71%
+  engine misc     0.9 s  ###.........................    9%
+  note: pass 1 was not a true cold start, weights were cached
+
+VERDICT: HEALTHY
+  The GPU did the work. Quote the decode number (18.4 tok/s)
+  when you compare setups. 568 tok/s is real too, but that is
+  prefill: prompt reading speed, not generation speed.
+
+YOUR NUMBER: 36.0 tok/s -> MATCHES NOTHING MEASURED HERE
+  36.0 tok/s is not within 30% of anything measured here
+  (closest: decode, off by 2.0x; measured: prefill 567.9, decode
+  18.4, wallclock 13.1 tok/s). Before trusting that number, ask
+  which of the three rates it was, and on what hardware, quant,
+  and context length.
+==================================================================

@@ -23,29 +23,32 @@ and leaves no process running afterwards.
 
 ## Why I wrote this
 
-Last week I had proof that my app was slowing local models down by a
-factor of three. Bare llama.cpp gave me 36 tok/s. The same model inside
-the app gave 11.5. Same machine, same day, case closed.
+While testing local models for an app I am building, I nearly filed a
+bug against my own code. Bare llama.cpp gave me 36 tok/s. The same
+model through the app gave 11.5. Same machine, same day, and 3x is the
+kind of number you reorganize a week around.
 
-Then I reran both sides properly: same binary, same parameters, a 32 cell
-matrix across CPU and GPU, cold and warm. The 36 never reproduced. Not in
-one cell. The number I had built a theory on was a rate from a different
-lane, most likely prefill or a wall clock reading from some other run,
-remembered as if it were generation speed. I never wrote down which lane
-it came from, so it got to mean whatever my theory needed it to mean.
+Before writing the fix I reran both sides properly: same binary, same
+parameters, a 32 cell matrix across CPU and GPU, cold and warm. The 36
+never reproduced. Not in one cell. The slowdown I was about to hunt did
+not exist. The number I had trusted was a rate from a different lane,
+most likely prefill or a wall clock reading from some other run,
+remembered as if it were generation speed. I never wrote down which
+lane it came from, so it got to mean whatever my theory needed it to
+mean.
 
-The real slowdown was somewhere else entirely. On some runs the engine
-put every layer on the CPU without saying anything at the level you
-normally look at. Generation speed barely moved, which is what makes this
-failure mode invisible. Time to first token on a long prompt is what
-explodes: about 5 seconds on the GPU became about 50 on the CPU for a
-2.5k token prompt, measured on the same machine during that
-investigation.
+What the matrix did surface was a real problem somewhere else entirely.
+On some runs the engine put every layer on the CPU without saying
+anything at the level you normally look at. Generation speed barely
+moved, which is what makes this failure mode invisible. Time to first
+token on a long prompt is what explodes: about 5 seconds on the GPU
+became about 50 on the CPU for a 2.5k token prompt, on the same
+machine.
 
-So the app was not 3x slower. My benchmark was lying, and separately, the
-GPU was sometimes not working at all. Two different bugs, both mine, both
-invisible in a single tok/s number. picchio is that week of debugging
-folded into one file you can run in a minute.
+So there was no 3x slowdown, there was a silent GPU problem, and my
+own note was the bug that hid one behind the other. Two measurement
+lessons, both invisible in a single tok/s number. picchio is that week
+of debugging folded into one file you can run in a minute.
 
 ## What it prints
 

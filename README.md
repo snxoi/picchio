@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="assets/picchio-mark-a.svg" width="96" alt="pixel woodpecker on a trunk">
+
 <h1>picchio</h1>
 
 <p>Picchio is Italian for woodpecker: one Python file that knocks on
@@ -342,7 +344,16 @@ stay comparable within a tag.
 |-----------------|------------------------------------|----------|--------:|-------:|----------:|---------|
 | Apple M5, 32 GB | Qwen3.5-9B Q4_K_M, llama.cpp b9430 | mp1      |   558.9 |   20.0 |      14.4 | HEALTHY |
 | Apple M5, 32 GB | qwen3.5:9b, ollama 0.31.1          | mp1      |   853.5 |   19.9 |      17.1 | HEALTHY |
+| Apple M5, 32 GB | Qwen3.6-35B-A3B UD-Q4, llama.cpp   | mp1      |   787.3 |   34.4 |      19.1 | HEALTHY |
+| Apple M5, 32 GB | qwen3.6:35b-a3b, ollama 0.31.1     | mp1      |  1191.8 |   33.4 |      27.6 | HEALTHY |
 | your machine    |                                    |          |         |        |           |         |
+
+The second model taught its own lesson. A 34.7B MoE with about 3B
+active parameters decodes 1.7x faster here than the dense 9B (34.4
+against 20.0 tok/s), while its 20.6 GiB of weights turn the cold start
+into a load problem: 13 of the first pass's 19 seconds went to
+loading. Both engines agree within 3% on its decode, and the raw logs
+sit behind the rows above.
 
 ## Small glossary
 

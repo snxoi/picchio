@@ -532,6 +532,41 @@ def wrap_para(text):
                          initial_indent="  ", subsequent_indent="  ")
 
 
+def colorize(text):
+    """ANSI color for terminals only. Piped or redirected output stays
+    pure ASCII, so a pasted block is identical to what the parser and
+    the selftest see. NO_COLOR is respected."""
+    if os.environ.get("NO_COLOR") or not sys.stdout.isatty():
+        return text
+    BOLD, DIM, RESET = "\033[1m", "\033[2m", "\033[0m"
+    GREEN, RED, YELLOW = "\033[32m", "\033[31m", "\033[33m"
+    states = (("SILENT CPU FALLBACK", RED), ("CONFLICTING EVIDENCE", YELLOW),
+              ("PARTIAL OFFLOAD", YELLOW), ("NO PLACEMENT EVIDENCE", YELLOW),
+              ("HEALTHY", GREEN))
+    out = []
+    for line in text.splitlines():
+        if line.startswith("VERDICT: "):
+            for state, col in states:
+                if state in line:
+                    line = line.replace(state, BOLD + col + state + RESET, 1)
+                    break
+        elif line.startswith("gpu "):
+            for word, col in (("NOT ENGAGED", RED), ("EVIDENCE UNKNOWN",
+                              YELLOW), ("NO EVIDENCE", YELLOW),
+                              ("PARTIAL", YELLOW), ("ENGAGED", GREEN)):
+                if word in line:
+                    line = line.replace(word, BOLD + col + word + RESET, 1)
+                    break
+        elif line.startswith("-- picchio") or (
+                "prefill" in line and "wallclock" in line
+                and "tok/s" not in line):
+            line = DIM + line + RESET
+        elif line.startswith("YOUR NUMBER: "):
+            line = BOLD + line + RESET
+        out.append(line)
+    return "\n".join(out)
+
+
 def gpu_line(rep, mode):
     if mode == "ollama":
         frac = rep["vram_frac"]
@@ -722,6 +757,9 @@ def main():
     )
     ap.add_argument("model", nargs="?",
                     help="path to a .gguf file, or an ollama model tag")
+    ap.add_argument("--version", action="version",
+                    version="picchio {} (protocol {})".format(
+                        VERSION, PROTOCOL))
     ap.add_argument("--bin", help="llama.cpp binary (default: find "
                                   "llama-completion or llama-cli on PATH)")
     ap.add_argument("--passes", type=int, default=3, metavar="N",
@@ -754,11 +792,12 @@ def main():
             sys.exit("picchio: no previous run cached; run with a model "
                      "first.")
         verdict, para = classify_number(args.explain, cached["rates"])
-        print("YOUR NUMBER: {:.1f} tok/s -> {}".format(args.explain, verdict))
-        print("\n".join(wrap_para(para)))
-        print("(rates: {}, {}, {})".format(
-            cached.get("model_name", "?"), cached.get("machine", "?"),
-            str(cached.get("stamp", "?"))[:10]))
+        print(colorize("\n".join(
+            ["YOUR NUMBER: {:.1f} tok/s -> {}".format(args.explain, verdict)]
+            + wrap_para(para)
+            + ["(rates: {}, {}, {})".format(
+                cached.get("model_name", "?"), cached.get("machine", "?"),
+                str(cached.get("stamp", "?"))[:10])])))
         return
 
     if args.model is None:
@@ -837,7 +876,7 @@ def main():
 
     block = render_verdict(mach, engine_str, model_name, passes, state,
                            para, mode, explain_part, cold_note)
-    print(block)
+    print(colorize(block))
 
     save_cache({
         "stamp": time.strftime("%Y-%m-%d %H:%M"),

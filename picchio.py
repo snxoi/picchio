@@ -21,6 +21,9 @@
 #   python3 picchio.py --selftest                     replay examples/raw
 #   python3 picchio.py model.gguf -- --device none -ngl 0
 #                                       (args after -- go to the engine)
+#   python3 picchio.py guard -- llama-server --verbose -m model.gguf
+#                                       (watch your own command; warn on
+#                                        degraded placement, never kill)
 #
 # Needs: python3 (any recent one), plus llama.cpp on PATH or a local ollama.
 # Nothing else. No pip.
@@ -807,6 +810,138 @@ def render_verdict(mach, engine_str, model_name, passes, state, para, mode,
     return "\n".join(out)
 
 
+# ------------------------------------------------------------------- guard
+
+RE_GUARD_OFF = re.compile(r"offloaded\s+(\d+)/(\d+)\s+layers to GPU")
+# lines worth pinning for the exit summary even after the tail window
+# has rolled past them: placement, fit, device and init evidence
+RE_GUARD_PIN = re.compile(
+    r"offloaded\s+\d+/\d+\s+layers|model buffer size|MiB free|"
+    r"common_params_fit_impl|ggml_metal|ggml_cuda|ggml_vulkan|"
+    r"ggml_backend|system_info")
+# a line that means the engine moved past loading; placement evidence
+# seen by now is final even on builds that print no buffer lines
+RE_GUARD_PAST = re.compile(
+    r"system_info|prompt eval time|listening|server is listening|"
+    r"main: server", re.I)
+
+
+def guard_why(rep, cmd):
+    """WHY attribution for a degraded placement seen by guard; None when
+    the placement is full (a healthy load needs no cause assigned)."""
+    n, total = rep["offload_n"], rep["offload_total"]
+    if n is None or not total or n >= total:
+        return None
+    state = "SILENT CPU FALLBACK" if n == 0 else "PARTIAL OFFLOAD"
+    return attribute_why(state, rep, "llama.cpp", cmd)
+
+
+def guard_state_line(rep, why):
+    line = "picchio guard: " + gpu_line(rep, "llama.cpp")
+    if why:
+        line += "; " + why
+    return line
+
+
+def guard(cmd, keep_dir=None):
+    """Wraps the user's own llama.cpp command (llama-server, llama-cli,
+    anything that logs to stderr), tees its stderr through untouched,
+    and speaks exactly twice on top of it: one placement line the moment
+    the evidence is complete, and a short summary when the child exits.
+    It never kills or signals the child: the requirement this mode comes
+    from is a tool that warns but refuses to get in the way."""
+    try:
+        child = subprocess.Popen(cmd, stderr=subprocess.PIPE, text=True,
+                                 errors="replace")
+    except OSError as e:
+        sys.exit("picchio guard: could not start {}: {}".format(cmd[0], e))
+    t0 = time.monotonic()
+    log = open(os.path.join(keep_dir, "guard.stderr.txt"), "w") \
+        if keep_dir else None
+    # pinned keeps the load time placement evidence forever; tail keeps
+    # the recent perf lines. A guarded server can log for hours, so the
+    # full stream is never held in memory (the placement evidence sits
+    # well under the caps: 238 lines at -lv 4, 1.7k at -lv 5 here).
+    pinned, tail = [], []
+    announced = False
+    pending = False  # an "offloaded n/total" line arrived, unconfirmed
+    try:
+        for line in child.stderr:
+            sys.stderr.write(line)
+            if log:
+                log.write(line)
+            stripped = line.rstrip("\n")
+            tail.append(stripped)
+            if len(tail) > 4000:
+                del tail[:2000]
+            if len(pinned) < 800 and RE_GUARD_PIN.search(stripped):
+                pinned.append(stripped)
+            if announced:
+                continue
+            if RE_GUARD_OFF.search(stripped):
+                pending = True
+                continue
+            # the fit planning pass also prints an "offloaded" line, but
+            # only the real load allocates buffers (its planning twin
+            # reports 0.00 MiB and no _Mapped suffix), so an offloaded
+            # line is confirmed by the next _Mapped buffer line, or by
+            # any line that shows the engine already running
+            if pending and ("_Mapped model buffer size" in stripped
+                            or RE_GUARD_PAST.search(stripped)):
+                rep = parse_stderr("\n".join(pinned), None)
+                sys.stderr.write(
+                    guard_state_line(rep, guard_why(rep, cmd)) + "\n")
+                announced = True
+    except KeyboardInterrupt:
+        pass  # ctrl-c went to the child too; fall through to its exit
+    try:
+        code = child.wait()
+    except KeyboardInterrupt:
+        sys.exit(130)  # second ctrl-c: leave, still without killing it
+    wall = time.monotonic() - t0
+    if log:
+        log.close()
+    rep = parse_stderr("\n".join(pinned + tail[-1200:]), wall)
+    out = ["picchio guard: {} exited {} after {:.1f} s".format(
+        os.path.basename(cmd[0]), code, wall)]
+    if rep["offload_n"] is None:
+        out.append("picchio guard: no placement evidence appeared on "
+                   "stderr; on llama.cpp builds where the default "
+                   "verbosity hides it, add --verbose or -lv 4")
+    else:
+        out.append(guard_state_line(rep, guard_why(rep, cmd)))
+    if rep["prefill_toks"] or rep["decode_toks"]:
+        out.append("picchio guard: last rates seen: prefill {}, "
+                   "decode {}".format(fmt_rate(rep["prefill_toks"]),
+                                      fmt_rate(rep["decode_toks"])))
+    sys.stderr.write("\n".join(out) + "\n")
+    # exit code: the child's own, passed through (128+N for a signal,
+    # the shell convention). Measure mode owns its subprocess, so there
+    # picchio's 0/2/3/4/5 codes are the product; here the subprocess is
+    # the user's product, and scripts wrapping their server must keep
+    # seeing the exit semantics they already depend on. The warning
+    # lives on stderr, not in the code.
+    sys.exit(code if code >= 0 else 128 - code)
+
+
+def guard_cli(argv):
+    keep = None
+    if argv[:1] in (["-h"], ["--help"]):
+        print("usage: picchio.py guard [--keep-logs DIR] -- <command...>\n"
+              "wrap a llama.cpp command; warn on stderr the moment its\n"
+              "own log shows layers landing off the GPU, never kill it,\n"
+              "and print a placement summary when it exits.")
+        sys.exit(0)
+    if argv[:1] == ["--keep-logs"] and len(argv) > 1:
+        keep = argv[1]
+        os.makedirs(keep, exist_ok=True)
+        argv = argv[2:]
+    if argv[:1] != ["--"] or len(argv) < 2:
+        sys.exit("picchio guard: usage: picchio.py guard "
+                 "[--keep-logs DIR] -- <command...>")
+    guard(argv[1:], keep)
+
+
 # ---------------------------------------------------------------- selftest
 
 def selftest():
@@ -894,6 +1029,11 @@ def load_cache():
 
 
 def main():
+    # guard wraps an arbitrary user command, so its arguments must not
+    # pass through the measurement mode parser: dispatch on the word
+    if sys.argv[1:2] == ["guard"]:
+        guard_cli(sys.argv[2:])
+        return
     ap = argparse.ArgumentParser(
         prog="picchio",
         description="Knocks on your local LLM setup and listens for hollow "
@@ -911,6 +1051,12 @@ def main():
             "when cold\n"
             "  offload    how many model layers sit on the GPU "
             "(0/33 = CPU run)\n"
+            "\n"
+            "guard mode:\n"
+            "  picchio.py guard [--keep-logs DIR] -- <command...>\n"
+            "  wrap your own llama.cpp command (llama-server, llama-cli);\n"
+            "  warn the moment placement evidence shows layers off the\n"
+            "  GPU, never kill it, summarize placement when it exits\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )

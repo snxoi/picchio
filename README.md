@@ -22,8 +22,9 @@ you actually get, and did the GPU really do the work?</p>
 
 That block is the whole product: three lanes that never get merged,
 placement evidence from the engine's own logs, a breakdown of the cold
-pass, and a verdict. It is 15 lines and 66 columns on purpose, so it
-survives being pasted into a comment thread. Real output, unedited
+pass, and a verdict. It is 15 lines, kept narrow on purpose so it
+survives being pasted into a comment thread; a long model filename can
+push the first line wider. Real output, unedited
 ([examples/healthy-metal.txt](examples/healthy-metal.txt)); the text
 version below is the one you paste:
 

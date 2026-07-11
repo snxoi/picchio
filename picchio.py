@@ -664,9 +664,9 @@ def gpu_line(rep, mode):
 
 def render_verdict(mach, engine_str, model_name, passes, state, para, mode,
                    explain_part=None, cold_note=None):
-    """The whole block stays inside 15 lines and 66 columns, so it
-    survives being pasted into a forum comment. That budget is a feature;
-    do not add lines without removing others."""
+    """The block stays inside 15 lines, kept narrow so it survives
+    pasting into a forum comment (a long model name can push line one
+    wider). The budget is a feature; never add lines without removing."""
     cold = passes[0]
     rep = build_rep(passes)
     out = []

@@ -114,6 +114,10 @@ lives in.
 
 ## The number everyone posts cannot see your bottleneck
 
+<p align="center">
+<img src="assets/prefill-decode-asymmetry.svg" width="600" alt="prefill collapses 22x from GPU to CPU while decode only drops 1.8x on the same model and file">
+</p>
+
 Measured here, the GPU buys about 2x on decode and about 22x on prefill
 (both runs are in [examples/](examples/), 4 of 10 cpu threads on the CPU
 side). Nearly every tok/s figure posted online is decode, because decode
@@ -128,6 +132,12 @@ you.
 
 Same machine, same model, same file, forced to CPU
 ([examples/cpu-fallback.txt](examples/cpu-fallback.txt)):
+
+<p align="center">
+<img src="assets/cpu-fallback-verdict.svg" width="600" alt="picchio verdict block in a terminal: NOT ENGAGED 0/33 layers, verdict SILENT CPU FALLBACK, WHY line naming the forcing flags">
+</p>
+
+The text version, the one you paste:
 
 ```
 model    Qwen3.5-9B-Q4_K_M.gguf, 8.95 B, 5.28 GiB, llama.cpp b9430

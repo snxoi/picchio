@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="558" height="236" viewBox="0 0 558 236" font-family="SF Mono, Menlo, Consolas, monospace" font-size="13">
+<rect width="558" height="236" rx="10" fill="#0d1117" stroke="#30363d"/>
+<text x="22" y="30" fill="#e6edf3">same model, same file: GPU run vs forced CPU run</text>
+<text x="22" y="50" fill="#8b949e" font-size="12">warm medians from examples/; bars scaled per lane, GPU = full width</text>
+<text x="22" y="86" fill="#e6edf3">prefill</text>
+<rect x="104" y="74" width="380" height="16" rx="3" fill="#3fb950"/>
+<text x="476" y="86" text-anchor="end" fill="#0d1117" font-size="12" font-weight="bold">gpu 558.9 tok/s</text>
+<rect x="104" y="98" width="17" height="16" rx="3" fill="#f85149"/>
+<text x="129" y="110" fill="#e6edf3" font-size="12">cpu 25.7 tok/s</text>
+<text x="536" y="110" text-anchor="end" fill="#f85149" font-size="12" font-weight="bold">22x collapse</text>
+<text x="22" y="144" fill="#e6edf3">decode</text>
+<rect x="104" y="132" width="380" height="16" rx="3" fill="#3fb950"/>
+<text x="476" y="144" text-anchor="end" fill="#0d1117" font-size="12" font-weight="bold">gpu 20.0 tok/s</text>
+<rect x="104" y="156" width="213" height="16" rx="3" fill="#f85149"/>
+<text x="309" y="168" text-anchor="end" fill="#0d1117" font-size="12" font-weight="bold">cpu 11.2 tok/s</text>
+<text x="536" y="168" text-anchor="end" fill="#d29922" font-size="12">only 1.8x, looks passable</text>
+<text x="22" y="204" fill="#8b949e" font-size="12">decode is the number people post; prefill is where a CPU fallback hurts.</text>
+</svg>

@@ -64,7 +64,7 @@ python3 picchio.py /path/to/model.gguf
 python3 picchio.py qwen3.5:9b
 ```
 
-No pip, no dependencies, no config. One Python file, 980 lines,
+No pip, no dependencies, no config. One Python file, 1074 lines,
 stdlib only. If you have python3 plus either llama.cpp or ollama, you
 already have everything it needs. It runs your model three times with
 a fixed prompt (the first pass cold, the rest warm), reads the
@@ -141,9 +141,9 @@ where the cold pass went (47.9 s, 4/10 threads, weights cached)
   prefill        31.4 s  ##################..........   65%
   decode         13.7 s  ########....................   29%
   engine misc     0.9 s  #...........................    2%
-VERDICT: SILENT CPU FALLBACK. 0 of 33 layers reached the GPU.
-  Decode (11.2) looks passable, which is how this hides. Prefill
-  at 26 tok/s parks a 2500 token prompt 97 s out. Check -ngl.
+VERDICT: SILENT CPU FALLBACK. Decode (11.2) looks passable; that
+  is how this hides. Prefill: 97 s per 2500 token prompt.
+WHY: forced by flag: --device none -ngl 0
 -- picchio v0.1.0 mp1 on Apple M5, 32 GB, macOS 26.5.1
 ```
 
@@ -151,7 +151,16 @@ Look at what moved and what did not. Decode dropped 2x, which in a chat
 you might shrug at. Prefill dropped 22x, and the first word of a long
 prompt now takes minutes. picchio calls this from two directions at
 once: the engine's own layer placement log (0/33 offloaded) and the
-prefill signature. You can reproduce this verdict on any Apple Silicon
+prefill signature.
+
+The WHY line on a degraded verdict is attribution, not a guess. It
+names the first cause it can prove from this run's own evidence: an
+explicit flag on the command line, the engine's memory fit figures
+(the MiB it saw free and the layers it granted), or a backend init
+failure line quoted as logged. When none of those are in the log, it
+says unknown, out loud, rather than inventing a reason.
+
+You can reproduce this verdict on any Apple Silicon
 machine with:
 
 ```

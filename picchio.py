@@ -27,6 +27,7 @@
 #             4 silent cpu fallback, 5 conflicting evidence.
 
 import argparse
+import glob
 import json
 import os
 import platform
@@ -353,6 +354,72 @@ def run_ollama_pass(tag, log_path=None):
     keep_log(log_path, json.dumps(resp, indent=1))
     ps = ollama_ps_entry(tag)
     return map_ollama(resp, wall_s, ps), ps
+
+
+def looks_like_tag(s):
+    """An ollama tag has no path separator and no .gguf suffix. Anything
+    path shaped that does not exist on disk must be reported as a missing
+    file, not quietly retried as a tag: a diagnostic that misdiagnoses
+    its own arguments has no business diagnosing your GPU."""
+    return "/" not in s and not s.lower().endswith(".gguf")
+
+
+def discover_models():
+    """No model argument: look around this machine (read only, fast) and
+    print commands that can be copied as they are."""
+    rows = []
+    ver = ollama_reachable()
+    if ver:
+        try:
+            for m in ollama_api("/api/tags", timeout=5).get("models", []):
+                if m.get("name"):
+                    rows.append((m["name"], "ollama"))
+        except (urllib.error.URLError, OSError, ValueError):
+            pass
+    else:
+        # ollama not running: its manifest folder still names the tags
+        base = os.path.expanduser("~/.ollama/models/manifests")
+        for reg in glob.glob(os.path.join(base, "*", "*", "*", "*")):
+            parts = reg.split(os.sep)
+            name, tag = parts[-2], parts[-1]
+            rows.append(("{}:{}".format(name, tag),
+                         "ollama, not running"))
+    rows = rows[:8]
+
+    patterns = (
+        "*.gguf",
+        "~/.cache/huggingface/hub/models--*/snapshots/*/*.gguf",
+        "~/.cache/lm-studio/models/*/*/*.gguf",
+        "~/.lmstudio/models/*/*/*.gguf",
+    )
+    seen, ggufs = set(), []
+    for pat in patterns:
+        for f in sorted(glob.glob(os.path.expanduser(pat))):
+            real = os.path.realpath(f)
+            base = os.path.basename(f).lower()
+            if real in seen or "mmproj" in base or f.endswith(".partial"):
+                continue
+            seen.add(real)
+            ggufs.append(f)
+    ggufs = ggufs[:8]
+
+    if not rows and not ggufs:
+        print("picchio: no model given, and none found in the usual "
+              "places\n(no ollama tags, no .gguf in the current folder, "
+              "the HF cache,\nor the LM Studio folders).\n\n"
+              "Point it at any .gguf file or ollama tag:\n"
+              "  python3 picchio.py /path/to/model.gguf\n"
+              "  python3 picchio.py some-tag:latest")
+        sys.exit(0)
+    print("picchio: no model given. Runnable on this machine:\n")
+    for tag, note in rows:
+        print("  python3 picchio.py {:<36} ({})".format(tag, note))
+    for f in ggufs:
+        q = '"{}"'.format(f) if " " in f else f
+        print("  python3 picchio.py {}".format(q))
+    print("\nPick one, or point it at any other .gguf path or ollama "
+          "tag.")
+    sys.exit(0)
 
 
 def ollama_unload(tag):
@@ -801,10 +868,13 @@ def main():
         return
 
     if args.model is None:
-        ap.print_help()
-        sys.exit(2)
+        discover_models()
     if args.passes < 2:
         sys.exit("picchio: --passes must be at least 2 (one cold, one warm).")
+    if args.extra and "--" not in sys.argv[1:]:
+        sys.exit("picchio: unexpected extra arguments: {}\n"
+                 "(a pasted trailing comment does this; engine args need "
+                 "a bare -- first)".format(" ".join(args.extra)))
 
     mach = machine_info()
     logdir = args.keep_logs
@@ -826,16 +896,22 @@ def main():
                 {"wall_s": p["wall_s"], "engine": engine_str,
                  "model_name": model_name}, indent=1))
             passes.append(p)
+    elif not looks_like_tag(args.model):
+        sys.exit("picchio: no such file: {}\nRun picchio with no "
+                 "arguments to see the models on this machine.".format(
+                     args.model))
     else:
         ver = ollama_reachable()
         if not ver:
             sys.exit(
-                "picchio: {} is not a file, and no ollama answered at "
-                "{}.\nGive a .gguf path, or start ollama and give a model "
-                "tag.".format(args.model, OLLAMA_HOST))
+                "picchio: {!r} looks like an ollama tag, but no ollama "
+                "answered at {}.\nStart ollama, or give a .gguf path; "
+                "run picchio with no arguments to see both.".format(
+                    args.model, OLLAMA_HOST))
         if not ollama_has_model(args.model):
             sys.exit("picchio: ollama at {} does not know the model "
-                     "{!r}.".format(OLLAMA_HOST, args.model))
+                     "{!r}.\nRun picchio with no arguments to list "
+                     "what it does know.".format(OLLAMA_HOST, args.model))
         if args.extra:
             sys.exit("picchio: passthrough args after -- only work in "
                      "llama.cpp mode.")

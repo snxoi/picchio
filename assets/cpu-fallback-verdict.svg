@@ -5,8 +5,8 @@
 <circle cx="62" cy="17" r="6" fill="#28c840"/>
 <text x="279" y="21" text-anchor="middle" fill="#8b949e" font-size="12">python3 picchio.py model.gguf -- --device none -ngl 0</text>
 <text x="22" y="69" xml:space="preserve"><tspan fill="#e6edf3">model    Qwen3.5-9B-Q4_K_M.gguf, 8.95 B, 5.28 GiB, llama.cpp b9430</tspan></text>
-<text x="22" y="89" xml:space="preserve"><tspan fill="#e6edf3">gpu      </tspan><tspan fill="#f85149" font-weight="bold">NOT ENGAGED</tspan><tspan fill="#e6edf3">: 0/33 layers on GPU</tspan></text>
-<text x="22" y="109" xml:space="preserve"><tspan fill="#8b949e">                 prefill         decode      wallclock</tspan></text>
+<text x="22" y="89" xml:space="preserve"><tspan fill="#e6edf3">gpu      </tspan><tspan fill="#f85149" font-weight="bold">NOT ENGAGED</tspan><tspan fill="#e6edf3">: 0/33 layers on GPU [--device none -ngl 0]</tspan></text>
+<text x="22" y="109" xml:space="preserve"><tspan fill="#8b949e">ctx 4096         prefill         decode      wallclock</tspan></text>
 <text x="22" y="129" xml:space="preserve"><tspan fill="#e6edf3">  cold        24.3 tok/s      9.3 tok/s      2.7 tok/s</tspan></text>
 <text x="22" y="149" xml:space="preserve"><tspan fill="#e6edf3">  warm mid    25.7 tok/s     11.2 tok/s      2.9 tok/s</tspan></text>
 <text x="22" y="169" xml:space="preserve"><tspan fill="#e6edf3">  warm span        26~26      11.0~11.4        2.9~2.9</tspan></text>

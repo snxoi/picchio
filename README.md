@@ -9,12 +9,12 @@ your local LLM setup and listens for hollow spots. Which tok/s did
 you actually get, and did the GPU really do the work?</p>
 
 <p>
-<a href="https://github.com/snxoi/picchio/actions/workflows/selftest.yml"><img src="https://github.com/snxoi/picchio/actions/workflows/selftest.yml/badge.svg" alt="selftest"></a>
+<a href="https://github.com/logxio/picchio/actions/workflows/selftest.yml"><img src="https://github.com/logxio/picchio/actions/workflows/selftest.yml/badge.svg" alt="selftest"></a>
 <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-2ea44f" alt="license: MIT"></a>
 <img src="https://img.shields.io/badge/python-3.9%2B%2C%20stdlib%20only-3776ab" alt="python 3.9+, stdlib only">
 </p>
 
-<p><a href="#get-it-running">Install</a> · <a href="#the-three-numbers">What it checks</a> · <a href="#guard-mode-watch-your-own-command">Guard</a> · <a href="examples/">Examples</a></p>
+<p><a href="#get-it-running">Install</a> · <a href="#the-three-numbers">What it checks</a> · <a href="#why-is-your-number-different-from-mine">Compare</a> · <a href="#guard-mode-watch-your-own-command">Guard</a> · <a href="examples/">Examples</a></p>
 
 <img src="assets/healthy-verdict.svg" width="600" alt="picchio verdict block in a terminal: GPU ENGAGED 33/33 layers, three lanes reported, verdict HEALTHY">
 
@@ -31,7 +31,7 @@ version below is the one you paste:
 ```
 model    Qwen3.5-9B-Q4_K_M.gguf, 8.95 B, 5.28 GiB, llama.cpp b9430
 gpu      ENGAGED: 33/33 layers on GPU (Metal: Apple M5)
-                 prefill         decode      wallclock
+ctx 4096         prefill         decode      wallclock
   cold       597.3 tok/s     17.2 tok/s     11.4 tok/s
   warm mid   558.9 tok/s     20.0 tok/s     14.4 tok/s
   warm span      522~596      18.8~21.2      13.2~15.6
@@ -49,7 +49,7 @@ VERDICT: HEALTHY. The GPU did the work. Quote the warm median
 ## Get it running
 
 ```
-curl -LO https://raw.githubusercontent.com/snxoi/picchio/main/picchio.py
+curl -LO https://raw.githubusercontent.com/logxio/picchio/main/picchio.py
 python3 picchio.py
 ```
 
@@ -64,7 +64,7 @@ python3 picchio.py /path/to/model.gguf
 python3 picchio.py qwen3.5:9b
 ```
 
-No pip, no dependencies, no config. One Python file, 1220 lines,
+No pip, no dependencies, no config. One Python file, 1473 lines,
 stdlib only. If you have python3 plus either llama.cpp or ollama, you
 already have everything it needs. It runs your model three times with
 a fixed prompt (the first pass cold, the rest warm), reads the
@@ -82,8 +82,9 @@ or context size, and once before you post a tok/s number anywhere.
 The parser is pinned by the raw logs in this repo. Running
 `python3 picchio.py --selftest` replays the unedited engine output in
 [examples/raw/](examples/raw/) and has to reproduce every committed
-verdict block line for line; right now that is 9 pass fixtures and 3
-blocks, and the badge above runs exactly that on every push.
+verdict block line for line; right now that is 9 pass fixtures, 3
+blocks and 4 checks on the compare ladder, and the badge above runs
+exactly that on every push.
 
 ## Three findings set the tone
 
@@ -141,8 +142,8 @@ The text version, the one you paste:
 
 ```
 model    Qwen3.5-9B-Q4_K_M.gguf, 8.95 B, 5.28 GiB, llama.cpp b9430
-gpu      NOT ENGAGED: 0/33 layers on GPU
-                 prefill         decode      wallclock
+gpu      NOT ENGAGED: 0/33 layers on GPU [--device none -ngl 0]
+ctx 4096         prefill         decode      wallclock
   cold        24.3 tok/s      9.3 tok/s      2.7 tok/s
   warm mid    25.7 tok/s     11.2 tok/s      2.9 tok/s
   warm span        26~26      11.0~11.4        2.9~2.9
@@ -207,6 +208,62 @@ last diagnostic run, so the check needs no rerun. Pass `--explain`
 together with a model path instead and the same section is appended
 under a full verdict block, one run for both.
 
+## Why is your number different from mine
+
+Two people run the same model and post different numbers; the
+argument that follows is usually two configurations talking past
+each other. Save both verdict blocks to files (surrounding forum
+text is fine) and let picchio have the argument instead:
+
+```
+python3 picchio.py compare mine.txt theirs.txt
+```
+
+Real output, comparing the two blocks above (the healthy Metal run
+against the forced CPU run):
+
+```
+picchio compare
+A: examples/healthy-metal.txt
+B: examples/cpu-fallback.txt
+
+           A                         B
+model      Qwen3.5-9B-Q4_K_M.gguf    same
+quant      Q4_K_M                    same
+engine     llama.cpp b9430           same
+place      33/33 layers on GPU       0/33 layers on GPU
+args       none                      --device none -ngl 0
+ctx        4096                      same
+threads    4/10                      same
+machine    Apple M5, 32 GB           same
+os         macOS 26.5.1              same
+
+rates (warm mid), tok/s:
+  prefill         558.9        25.7   A 21.7x faster
+  decode           20.0        11.2   A 1.8x faster
+  wallclock        14.4         2.9   A 5.0x faster
+
+SUSPECT: placement. A ran 33/33 layers on GPU, B ran 0/33 layers
+  on GPU. Fix that first; nothing else gets blamed while the first
+  rung differs.
+```
+
+The suspect comes from a fixed ladder, not a guess: placement first,
+then quantization, then a context size an order of magnitude apart,
+then hardware. The first rung that differs takes the blame and the
+climb stops; when every variable both blocks carry agrees, picchio
+says so and names what a block cannot see (background load,
+thermals, disk cache) instead of inventing a culprit, and two
+identical blocks get "nothing to compare".
+
+This is what the block's configuration fingerprint is for: the ctx
+figure next to the lane headers, and any passthrough engine args
+printed on the gpu line (`[--device none -ngl 0]` above), on top of
+the model, quant, build, placement, threads and hardware the block
+already carried. Blocks printed by older picchio versions are
+missing the two new fields; compare reports those as unknown rather
+than guessing around them.
+
 ## Ollama mode
 
 Give picchio an ollama model tag instead of a file path and it runs the
@@ -222,7 +279,7 @@ Real run, same weights imported into ollama
 ```
 model    qwen3.5:9b, 9.0 B, Q4_K_M, 5.55 GiB, ollama 0.31.1
 gpu      ENGAGED: 100% of weights in GPU memory (ollama ps)
-                 prefill         decode      wallclock
+ctx 4096         prefill         decode      wallclock
   cold       539.2 tok/s     19.3 tok/s     12.2 tok/s
   warm mid   853.5 tok/s     19.9 tok/s     17.1 tok/s
   warm span      847~860      19.5~20.4      16.8~17.4
@@ -246,9 +303,9 @@ because a reported split can itself be wrong, picchio cross checks it
 against the measured rates: when ollama claims full GPU placement but
 the prefill to decode ratio looks CPU shaped, the verdict downgrades
 to CONFLICTING EVIDENCE instead of HEALTHY.
-Measurement over llama.cpp, measurement over ollama, and the guard
-mode below: that is the whole scope, and picchio stays one readable
-file.
+Measurement over llama.cpp, measurement over ollama, comparing two
+saved blocks, and the guard mode below: that is the whole scope, and
+picchio stays one readable file.
 
 ## Guard mode: watch your own command
 
@@ -298,11 +355,14 @@ summary says exactly that instead of judging.
 ```
 picchio MODEL [flags] [-- engine args]
 picchio guard [--keep-logs DIR] -- <command...>
+picchio compare A.txt B.txt
 
 MODEL            a .gguf path (llama.cpp) or an ollama model tag;
                  with no arguments, lists runnable models it can find
 guard            wrap your own llama.cpp command: warn on degraded
                  placement, never kill it, summarize when it exits
+compare          diff two saved verdict blocks variable by variable,
+                 blame the first config difference on the ladder
 --passes N       measurement passes, first one cold (default 3)
 --explain TOKS   classify a number you saw against the measured lanes
 --keep-logs DIR  save each pass's raw engine output into DIR
@@ -467,7 +527,8 @@ the cost of runtime (`--passes 5`).
 Exit codes, for scripting: 0 healthy or no evidence, 2 could not run,
 3 partial offload, 4 silent CPU fallback, 5 conflicting evidence.
 Guard mode is the exception: it passes the wrapped command's own exit
-code through untouched.
+code through untouched. Compare exits 0 once both blocks parse,
+whatever the suspect turns out to be.
 
 ## License
 

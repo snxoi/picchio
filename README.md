@@ -137,13 +137,13 @@ WHY: forced by flag: --device none -ngl 0
 -- picchio v0.1.0 mp1 on Apple M5, 32 GB, macOS 26.5.1
 ```
 
-Look at what moved and what did not. Decode dropped well under 2x,
-which in a chat you might shrug at. Prefill dropped 22x, and the
-first word of a long prompt now takes a minute and a half. picchio
-calls this from three directions: the placement log (0/33
-offloaded), the prefill signature, and the os line, which watched
-the GPU sleep through the whole run. The forcing flags ride the gpu
-line, so the block carries its own reproduction recipe.
+Look at what moved and what did not: decode barely dropped, but
+prefill fell 22x, so the first word of a long prompt now takes a
+minute and a half. picchio calls this from three directions: the
+placement log (0/33 offloaded), the prefill signature, and the os
+line that watched the GPU sleep through the whole run. The forcing
+flags ride the gpu line, so the block carries its own reproduction
+recipe.
 
 The WHY line on a degraded verdict is attribution, not a guess. It
 names the first cause it can prove from this run's own evidence: an
@@ -163,11 +163,10 @@ reads the OS's own GPU accounting (`ioreg`, utilization and memory,
 reports, minus the sudo: the `os` line, under the engine's claim.
 
 Read the two lines against each other in the healthy block: the
-engine says 33/33 layers on GPU; the OS says the GPU sat at 0%
-before the run, ran at a median 99% utilization exactly while the
-tokens were made, stepped its allocated memory up 6.0 GiB when the
-5.28 GiB of weights landed, and drew 11.0 W doing it. The engine
-could have written anything; the meter was watching either way.
+engine says 33/33 on GPU; the OS says that GPU sat idle before the
+run, ran at a median 99% exactly while the tokens were made, and
+stepped its memory up as the weights landed. The engine could have
+written anything; the meter was watching either way.
 
 A verdict is a three way agreement: the engine's confession, the OS
 meter, and the prefill/decode speed signature each get a vote, and a
@@ -358,12 +357,12 @@ VERDICT: FLAG. 2 physical contradictions in this block:
 This block contradicts itself; do not trust its numbers as one run.
 ```
 
-One edit, two independent witnesses. Prefill at 2.2x decode is a CPU
-signature (a real GPU run is 20x and up), and the OS meter left in the
-block saw the GPU flat at 5% while the tokens were made. A genuine
-block passes: `verify` exits 0 when the sources agree, 5 when they
-fight, the same code a live run gets for conflicting evidence. It reads
-a file or stdin, so it drops straight into a paste-review habit.
+One edit, and the block's own numbers now disagree with themselves:
+two independent witnesses, the speed signature and the OS meter,
+caught it. A genuine block passes; `verify` exits 0 when the sources
+agree, 5 when they fight, the same code a live run gets for
+conflicting evidence, and reads a file or stdin so it drops straight
+into a paste-review habit.
 
 ## Watch: any engine, no log parsing
 
@@ -386,11 +385,8 @@ GPU BUSY: something is running kernels on the gpu (work 98%
 ```
 
 Give it a PID (`picchio watch 12345`) to bound the window to that
-process's lifetime, or nothing to snapshot the whole GPU. It is honest
-about its own limit: ioreg meters the whole GPU, not one process, so
-watch reports machine level truth and says so rather than pretending a
-number belongs to one job. When the GPU sits idle while you know
-something is generating, that is the answer, it is on the CPU, and
+process, or nothing to snapshot the whole GPU. A GPU idle while you
+know something is generating is the answer, it is on the CPU, and
 watch exits 4 to say so.
 
 ## The number decays with context
@@ -416,12 +412,11 @@ SLOPE: decode fell 11% from 2531 to 21079 tokens (8x deeper): 20.0
   every token you generate.
 ```
 
-Decode fell 11% from 2.5k to 21k tokens, prefill 30% (its attention
-cost grows with the prompt), and wallclock collapsed because reading a
-21k token prompt dominates the whole run. The depth column is the token
-count the engine actually reached, not the `-c` ceiling. Whether your
-own curve is flat or steep, that is the point: it is a number no forum
-post carries, and now you can measure it instead of guessing.
+Prefill fell 30% too, its attention cost growing with the prompt, and
+the depth column is the token count the engine actually reached, not
+the `-c` ceiling. Whether your own curve is flat or steep, that is the
+point: a number no forum post carries, and now you can measure it
+instead of guessing.
 
 ## Options
 

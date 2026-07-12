@@ -418,27 +418,35 @@ def looks_like_tag(s):
     return "/" not in s and not s.lower().endswith(".gguf")
 
 
-def discover_models():
-    """No model argument: look around this machine (read only, fast) and
-    print commands that can be copied as they are."""
-    rows = []
-    ver = ollama_reachable()
-    if ver:
+HINT_NO_MODELS = (
+    "picchio: no model given, and none found in the usual places\n"
+    "(no ollama tags, no .gguf in the current folder, the HF cache,\n"
+    "or the LM Studio folders).\n\n"
+    "Point it at any .gguf file or ollama tag:\n"
+    "  python3 picchio.py /path/to/model.gguf\n"
+    "  python3 picchio.py some-tag:latest")
+
+
+def scan_models():
+    """Look around this machine (read only, fast) for models it can run:
+    ollama tags (the live api, or the manifest folder when ollama is not
+    up), then .gguf files in this folder, the HF cache and the LM Studio
+    folders. Returns (label, note, arg) rows: label and note name the
+    source for a human, arg is the exact string the pipeline runs."""
+    ollama = []
+    if ollama_reachable():
         try:
             for m in ollama_api("/api/tags", timeout=5).get("models", []):
                 if m.get("name"):
-                    rows.append((m["name"], "ollama"))
+                    ollama.append((m["name"], "ollama", m["name"]))
         except (urllib.error.URLError, OSError, ValueError):
             pass
     else:
-        # ollama not running: its manifest folder still names the tags
         base = os.path.expanduser("~/.ollama/models/manifests")
         for reg in glob.glob(os.path.join(base, "*", "*", "*", "*")):
             parts = reg.split(os.sep)
-            name, tag = parts[-2], parts[-1]
-            rows.append(("{}:{}".format(name, tag),
-                         "ollama, not running"))
-    rows = rows[:8]
+            full = "{}:{}".format(parts[-2], parts[-1])
+            ollama.append((full, "ollama, not running", full))
 
     patterns = (
         "*.gguf",
@@ -454,26 +462,70 @@ def discover_models():
             if real in seen or "mmproj" in base or f.endswith(".partial"):
                 continue
             seen.add(real)
-            ggufs.append(f)
-    ggufs = ggufs[:8]
+            ggufs.append((os.path.basename(f), "gguf", f))
+    return ollama[:8] + ggufs[:8]
 
-    if not rows and not ggufs:
-        print("picchio: no model given, and none found in the usual "
-              "places\n(no ollama tags, no .gguf in the current folder, "
-              "the HF cache,\nor the LM Studio folders).\n\n"
-              "Point it at any .gguf file or ollama tag:\n"
-              "  python3 picchio.py /path/to/model.gguf\n"
-              "  python3 picchio.py some-tag:latest")
-        sys.exit(0)
+
+def print_discovery(cands):
+    """No terminal to ask at (a pipe or a redirect): print the commands
+    that reproduce a run instead of a menu, each still pasteable as is."""
     print("picchio: no model given. Runnable on this machine:\n")
-    for tag, note in rows:
-        print("  python3 picchio.py {:<36} ({})".format(tag, note))
-    for f in ggufs:
-        q = '"{}"'.format(f) if " " in f else f
-        print("  python3 picchio.py {}".format(q))
-    print("\nPick one, or point it at any other .gguf path or ollama "
-          "tag.")
-    sys.exit(0)
+    for label, note, arg in cands:
+        q = '"{}"'.format(arg) if " " in arg else arg
+        print("  python3 picchio.py {:<36} ({})".format(q, note))
+    print("\nPick one, or point it at any other .gguf path or ollama tag.")
+
+
+def _ask_line(prompt):
+    """Read one line for the single direction question. EOF or ctrl-c
+    returns None: declining to answer ends the flow, it does not crash it."""
+    try:
+        return input(prompt)
+    except (EOFError, KeyboardInterrupt):
+        print()
+        return None
+
+
+def resolve_direction(cands, interactive, ask, emit):
+    """The whole zero-argument entry decision, in one place and pure of
+    real IO so every path is testable. cands is what scan_models found;
+    interactive says a terminal is on both ends; ask(prompt) returns the
+    next typed line (or None at EOF); emit(line) shows one status line.
+    Returns (action, model): ('run', arg) to diagnose arg, ('print', None)
+    to fall back to pasteable commands, ('stop', None) for nothing to run.
+    The flow asks at most once, and only at a real fork; one model needs no
+    menu, and after the answer nothing else is asked."""
+    if not interactive:
+        return ("print", None) if cands else ("stop", None)
+    if not cands:
+        emit("No models found.")
+        raw = (ask("Model (path or tag): ") or "").strip()
+        return ("run", raw) if raw else ("stop", None)
+    if len(cands) == 1:
+        label, note, arg = cands[0]
+        emit("1 model found.")
+        emit("Selected: {} ({}).".format(label, note))
+        return ("run", arg)
+    emit("{} models found.".format(len(cands)))
+    emit("")
+    for i, (label, note, arg) in enumerate(cands, 1):
+        emit("  {}) {:<40} {}".format(i, label, note))
+    emit("")
+    while True:
+        line = ask("Model (number, path, or tag): ")
+        if line is None or not line.strip():
+            return ("stop", None)
+        raw = line.strip()
+        if raw.isdigit():
+            k = int(raw)
+            if 1 <= k <= len(cands):
+                label, note, arg = cands[k - 1]
+                emit("Selected: {} ({}).".format(label, note))
+                return ("run", arg)
+            emit("No model {} in the list.".format(k))
+            continue
+        emit("Selected: {}.".format(raw))
+        return ("run", raw)
 
 
 def ollama_unload(tag):
@@ -2286,14 +2338,62 @@ def selftest():
             sw_ok += 1
     else:
         sw_all = 1  # no committed sweep yet: only the synthetic check runs
+    # onboarding: the zero-argument entry decision is pure given what the
+    # scan found, whether a terminal is attached, and what gets typed. The
+    # four paths plus the two edges, none of them touching a tty or a gpu
+    gd_ok, gd_all = 0, 6
+    two = [("qwen3.5:9b", "ollama", "qwen3.5:9b"),
+           ("llama-3-8b.gguf", "gguf", "/models/llama-3-8b.gguf")]
+    one = [two[0]]
+
+    def scripted(lines):
+        it = iter(lines)
+        return lambda prompt: next(it, None)
+
+    def sink():
+        out = []
+        return out, out.append
+
+    # 1: exactly one model on a terminal runs with no question asked
+    log, emit = sink()
+    if resolve_direction(one, True, scripted([]), emit) \
+            == ("run", "qwen3.5:9b") \
+            and any("Selected: qwen3.5:9b" in x for x in log):
+        gd_ok += 1
+    # 2: a real fork, the user types the menu number, that model runs
+    log, emit = sink()
+    if resolve_direction(two, True, scripted(["2"]), emit) \
+            == ("run", "/models/llama-3-8b.gguf") \
+            and "2 models found." in log:
+        gd_ok += 1
+    # 3: not a terminal (pipe/redirect) falls back to pasteable commands
+    if resolve_direction(two, False, scripted([]), lambda s: None) \
+            == ("print", None):
+        gd_ok += 1
+    # 4: the scan missed it, a typed path overrides the menu and runs
+    if resolve_direction(two, True, scripted(["/tmp/my.gguf"]),
+                         lambda s: None) == ("run", "/tmp/my.gguf"):
+        gd_ok += 1
+    # 5: nothing found but a terminal is on, the one prompt takes a tag
+    log, emit = sink()
+    if resolve_direction([], True, scripted(["some-tag:latest"]), emit) \
+            == ("run", "some-tag:latest") and "No models found." in log:
+        gd_ok += 1
+    # 6: an out-of-range number re-asks, it never runs model zero
+    log, emit = sink()
+    if resolve_direction(two, True, scripted(["9", "1"]), emit) \
+            == ("run", "qwen3.5:9b") \
+            and any("No model 9" in x for x in log):
+        gd_ok += 1
     print("parser fixtures {}/{}, verdict replay {}/{}, compare {}/{}, "
-          "telemetry {}/{}, verify {}/{}, watch {}/{}, sweep {}/{}".format(
+          "telemetry {}/{}, verify {}/{}, watch {}/{}, sweep {}/{}, "
+          "onboarding {}/{}".format(
               fx_ok, fx_all, rp_ok, rp_all, cp_ok, cp_all, te_ok, te_all,
-              ve_ok, ve_all, wa_ok, wa_all, sw_ok, sw_all))
+              ve_ok, ve_all, wa_ok, wa_all, sw_ok, sw_all, gd_ok, gd_all))
     sys.exit(0 if fx_ok == fx_all and rp_ok == rp_all and rp_all
              and cp_ok == cp_all and te_ok == te_all
              and ve_ok == ve_all and wa_ok == wa_all
-             and sw_ok == sw_all else 1)
+             and sw_ok == sw_all and gd_ok == gd_all else 1)
 
 
 # -------------------------------------------------------------------- main
@@ -2432,7 +2532,21 @@ def main():
         return
 
     if args.model is None:
-        discover_models()
+        # no direction from argv: the one place a model may be asked for.
+        # a terminal on both ends means a person is watching; a pipe or a
+        # redirect on either end stays composable and is never asked
+        cands = scan_models()
+        interactive = sys.stdin.isatty() and sys.stdout.isatty()
+        action, chosen = resolve_direction(
+            cands, interactive, _ask_line, print)
+        if action == "run":
+            args.model = chosen
+        else:
+            if action == "print":
+                print_discovery(cands)
+            elif not interactive:
+                print(HINT_NO_MODELS)
+            sys.exit(0)
     if args.passes < 2:
         sys.exit("picchio: --passes must be at least 2 (one cold, one warm).")
     if args.extra and "--" not in sys.argv[1:]:

@@ -20,11 +20,8 @@ actually get, and did the GPU really do the work?</p>
 
 </div>
 
-That block is the whole product: three lanes never merged into one
-number, placement evidence from the engine's own logs, the OS
-meter's independent reading, a cold pass breakdown, and a verdict,
-in 15 lines, 66 columns, narrow enough to paste into a comment
-thread. Real output, unedited
+That block is the product: 15 lines, 66 columns, narrow enough to
+paste into a comment thread. Real output, unedited
 ([examples/healthy-metal.txt](examples/healthy-metal.txt));
 the text version below is the one you paste:
 
@@ -76,12 +73,9 @@ When to rerun it: after a llama.cpp or ollama upgrade, after an OS
 update, after switching quants of the same model, after touching -ngl
 or context size, and once before you post a tok/s number anywhere.
 
-`python3 picchio.py --selftest` replays the unedited engine output
-in [examples/raw/](examples/raw/) and must reproduce every
-committed verdict block line for line (9 pass fixtures, 3 blocks,
-4 compare checks, 5 synthetic telemetry timelines, 4 verify checks,
-3 watch checks, 2 context-sweep checks, 6 onboarding checks); the
-badge runs it on every push.
+`python3 picchio.py --selftest` replays the raw engine logs in
+[examples/raw/](examples/raw/) and must reproduce every committed
+verdict block line for line; the badge runs it on every push.
 
 ## Commands
 
@@ -118,19 +112,16 @@ watch            point the OS GPU meter at a process or the whole GPU
 ```
 
 Anything after a bare `--` goes straight to the llama.cpp binary.
-Color appears only on a terminal (`NO_COLOR` is respected); piped
-output stays plain ASCII, byte for byte what the selftest verifies.
+Color only on a terminal (`NO_COLOR` respected); piped output is
+plain ASCII.
 
-Exit codes, for scripting:
-
-- 0 healthy or no evidence, 2 could not run, 3 partial offload,
-  4 silent CPU fallback, 5 conflicting evidence
-- guard passes the wrapped command's own exit code through
-  (128 plus the signal number if it died by one)
-- compare exits 0 once both blocks parse
-- verify exits 0 when a block is self-consistent, 5 when its
-  sources fight
-- watch exits 0 when the GPU is working, 4 when it sits idle
+Exit codes, for scripting: 0 healthy or no evidence, 2 could not
+run, 3 partial offload, 4 silent CPU fallback, 5 conflicting
+evidence. guard passes the wrapped command's own exit code through
+(128 plus the signal number if it died by one); compare exits 0
+once both blocks parse; verify exits 0 when a block is
+self-consistent, 5 when its sources fight; watch exits 0 when the
+GPU is working, 4 when it sits idle.
 
 ## The three numbers
 
@@ -150,12 +141,11 @@ number without its lane label cannot be compared with anything.
 The lanes fail separately. Measured here, the GPU buys about 22x on
 prefill and under 2x on decode (both runs are in
 [examples/](examples/), 4 of 10 cpu threads on the CPU side). Nearly
-every figure posted online is decode, because decode feels like
-typing speed, but most of the pain on consumer hardware lives in
-prefill, which sets the time to first token on a long prompt (on a
-cold start, roughly load plus prefill): a Mac screenshot showing 500
-tok/s is almost always prefill, and two setups can post the same
-decode number while one takes ten times longer to start answering.
+every figure posted online is decode, but most of the pain lives in
+prefill, which sets the time to first token on a long prompt: a Mac
+screenshot showing 500 tok/s is almost always prefill, and two
+setups can post the same decode number while one takes ten times
+longer to start answering.
 
 ## Silent CPU fallback
 
@@ -186,12 +176,11 @@ WHY: forced by flag: --device none -ngl 0
 -- picchio v0.1.0 mp1 on Apple M5, 32 GB, macOS 26.5.1
 ```
 
-Look at what moved and what did not: decode barely dropped, but
-prefill fell 22x, so the first word of a long prompt now takes a
-minute and a half. picchio calls this from three directions: the
-placement log (0/33 offloaded), the prefill signature, and the os
-line that saw the GPU stay idle through the whole run. The forcing
-flags are printed on the gpu line.
+Decode barely dropped, but prefill fell 22x, so the first word of a
+long prompt now takes a minute and a half. picchio calls this from
+three directions: the placement log (0/33 offloaded), the prefill
+signature, and the os line that saw the GPU stay idle through the
+run. The forcing flags are printed on the gpu line.
 
 The WHY line on a degraded verdict names the first cause it can
 prove from this run's own evidence: an explicit flag on the command
@@ -206,22 +195,18 @@ that reported a full GPU load while the kernels ran elsewhere. So
 while the passes run on macOS, a background thread reads the OS's
 own GPU accounting (`ioreg`, utilization and memory, 4 Hz) and GPU
 power from the same energy counters `powermetrics` reports, minus
-the sudo: the `os` line, printed under the engine's claim.
+the sudo: the `os` line.
 
 The verdict takes three sources: the engine's placement log, the OS
 meter, and the prefill/decode speed signature. A full offload claim
-earns HEALTHY only while no source contradicts it; an engine
-claiming full offload over a GPU the OS saw stay flat gets
-CONFLICTING EVIDENCE (exit 5), the two claims printed one above the
-other. A missing source abstains; only a present, contradicting one
-can flip a verdict. Off macOS, with `--no-telemetry`, or when ioreg
-gives nothing back, the os line reads
-`gpu not sampled (reason); evidence: engine+timing`. On a GPU that
-was already busy before the run it reads `not idle; not judged`:
-the meter counts the whole GPU, and someone else's workload cannot
-convict or clear your engine. Thermal pressure adds `throttled` to
-the line; power and thermal state are printed for the record and
-never vote.
+earns HEALTHY only while no source contradicts it; a claimed full
+offload over a GPU the OS saw stay flat gets CONFLICTING EVIDENCE
+(exit 5). A missing source abstains: off macOS, with
+`--no-telemetry`, or when ioreg gives nothing back, the line reads
+`gpu not sampled (reason); evidence: engine+timing`; on a GPU
+already busy before the run it reads `not idle; not judged`.
+Thermal pressure adds `throttled`; power and thermal state never
+vote.
 
 ## Explain a number
 
@@ -243,16 +228,13 @@ The check reads the rates cached at your last diagnostic run, so it
 needs no rerun; with a model path, `--explain` appends the same
 section under a full verdict block instead.
 
-That 36 is the number this repo exists because of, asked against
-the machine it supposedly came from. I had been systematically
-measuring local models for an app I am building, weeks of it, when
-bare llama.cpp gave me 36 tok/s and the same model through the app
-gave 11.5; I nearly filed a bug over that 3x. A 32 cell matrix
-across CPU and GPU, cold and warm, reproduced the 36 in no cell: it
-was a rate from a different lane, remembered as generation speed.
-What the matrix did surface was the silent CPU fallback above: on
-some runs the engine put every layer on the CPU without saying
-anything at the level you normally look at.
+That 36 is the number this repo exists because of. While measuring
+local models for an app I am building, weeks of it, bare llama.cpp
+gave me 36 tok/s and the same model through the app gave 11.5. A 32
+cell matrix across CPU and GPU, cold and warm, reproduced the 36 in
+no cell: a rate from a different lane, remembered as generation
+speed. What the matrix did surface was the silent CPU fallback
+above.
 
 ## Compare two blocks
 
@@ -286,18 +268,13 @@ SUSPECT: placement. A ran 33/33 layers on GPU, B ran 0/33 layers
   rung differs.
 ```
 
-The suspect comes from a fixed ladder: placement first, then
+The suspect comes from a fixed ladder: placement, then
 quantization, then a context size an order of magnitude apart, then
-hardware; the first rung that differs takes the blame and the climb
-stops. When every variable both blocks carry agrees, compare
-reports nothing to compare and names what a block cannot see
-(background load, thermals, disk cache).
-
-The fingerprint comes from the block itself: the ctx figure by the
-lane headers and any passthrough engine args on the gpu line
-(`[--device none -ngl 0]` above), plus the model, quant, build,
-placement, threads and hardware already carried. Blocks from older
-picchio versions miss the two fields; compare says unknown.
+hardware; the first rung that differs takes the blame. When
+everything agrees, compare says so and names what a block cannot
+see (background load, thermals, disk cache). All the variables are
+read from the blocks themselves; blocks from older picchio versions
+miss the ctx and args fields, and compare says unknown.
 
 ## Ollama mode
 
@@ -326,23 +303,20 @@ VERDICT: HEALTHY. Ollama reports 100% of weights in GPU memory.
 -- picchio v0.1.0 mp1 on Apple M5, 32 GB, macOS 26.5.1
 ```
 
-Be aware of what this mode cannot see, because ollama does not
-expose it: per layer placement, device init logs, thread
-configuration. llama.cpp mode is the full diagnosis; ollama mode is
-measurement plus a placement check, and with no memory split at all
-the placement reads unknown. The three way judgment applies
-unchanged, the os line sampled from outside the server process.
+What this mode cannot see, because ollama does not expose it: per
+layer placement, device init logs, thread configuration. llama.cpp
+mode is the full diagnosis; ollama mode is measurement plus a
+placement check (unknown when no memory split is reported). The
+three way judgment applies unchanged.
 
 ## Guard mode
 
-The verdict block needs picchio to own the run; guard mode is the
-inverse: your command, your flags, your server. picchio spawns it,
-streams its stderr through untouched, never kills or signals it,
-prints one warning line the moment the log shows layers landing off
-the GPU (with the same WHY attribution the verdict block carries),
-and leaves a short placement summary when your command exits, its
-exit code passed through. Real run, engine output elided down to
-picchio's own lines (the full stream passes through unchanged):
+Guard wraps your own command: picchio spawns it, streams its stderr
+through untouched, never kills or signals it, prints one warning
+line the moment the log shows layers landing off the GPU (with the
+same WHY attribution), and leaves a short placement summary when
+your command exits, its exit code passed through. Real run, engine
+output elided down to picchio's own lines:
 
 ```
 $ python3 picchio.py guard -- llama-completion \
@@ -467,13 +441,11 @@ picchio reports that layer: placement, cold start, and a verdict.
 Apple M5, 32 GB, macOS 26.5.1, llama.cpp build 9430 and ollama
 0.31.1, roughly 730 prompt tokens and 128 generated tokens per pass,
 three passes, the first one cold. That protocol is named in every
-block footer (mp1); if it ever changes the tag changes, so numbers
-from different protocols never sit in one series. Every number came
-out of a real run on this hardware (nothing in this repo is
-projected or extrapolated), the lane columns hold warm medians, and
-the unedited engine output behind the first three rows sits in
-[examples/raw/](examples/raw/), written by `--keep-logs`: the
-verdict quotes the numbers, the log is where they came from.
+block footer (mp1); if it ever changes the tag changes. Every
+number came out of a real run on this hardware, the lane columns
+hold warm medians, and the raw engine output behind the first three
+rows sits in [examples/raw/](examples/raw/), written by
+`--keep-logs`.
 
 | machine         | model, engine                      | protocol | prefill | decode | wallclock | verdict             |
 |-----------------|------------------------------------|----------|--------:|-------:|----------:|---------------------|

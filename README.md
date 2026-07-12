@@ -140,12 +140,10 @@ number without its lane label cannot be compared with anything.
 
 The lanes fail separately. Measured here, the GPU buys about 22x on
 prefill and under 2x on decode (both runs are in
-[examples/](examples/), 4 of 10 cpu threads on the CPU side). Nearly
-every figure posted online is decode, but most of the pain lives in
-prefill, which sets the time to first token on a long prompt: a Mac
-screenshot showing 500 tok/s is almost always prefill, and two
-setups can post the same decode number while one takes ten times
-longer to start answering.
+[examples/](examples/), 4 of 10 cpu threads on the CPU side).
+Nearly every figure posted online is decode, but prefill sets the
+time to first token on a long prompt: a Mac screenshot showing 500
+tok/s is almost always prefill.
 
 ## Silent CPU fallback
 
@@ -176,37 +174,21 @@ WHY: forced by flag: --device none -ngl 0
 -- picchio v0.1.0 mp1 on Apple M5, 32 GB, macOS 26.5.1
 ```
 
-Decode barely dropped, but prefill fell 22x, so the first word of a
-long prompt now takes a minute and a half. picchio calls this from
-three directions: the placement log (0/33 offloaded), the prefill
-signature, and the os line that saw the GPU stay idle through the
-run. The forcing flags are printed on the gpu line.
-
-The WHY line on a degraded verdict names the first cause it can
-prove from this run's own evidence: an explicit flag on the command
-line, the engine's memory fit figures (the MiB it saw free and the
-layers it granted), or a backend init failure line quoted as
-logged. When none of those are in the log, it says unknown.
+Decode barely dropped, but prefill fell 22x: the first word of a
+long prompt now takes a minute and a half. The WHY line names the
+first cause the run's own evidence can prove, or says unknown.
 
 ## The os line
 
 Engine logs have been wrong before: ollama has shipped releases
 that reported a full GPU load while the kernels ran elsewhere. So
 while the passes run on macOS, a background thread reads the OS's
-own GPU accounting (`ioreg`, utilization and memory, 4 Hz) and GPU
-power from the same energy counters `powermetrics` reports, minus
-the sudo: the `os` line.
-
-The verdict takes three sources: the engine's placement log, the OS
-meter, and the prefill/decode speed signature. A full offload claim
-earns HEALTHY only while no source contradicts it; a claimed full
-offload over a GPU the OS saw stay flat gets CONFLICTING EVIDENCE
-(exit 5). A missing source abstains: off macOS, with
-`--no-telemetry`, or when ioreg gives nothing back, the line reads
-`gpu not sampled (reason); evidence: engine+timing`; on a GPU
-already busy before the run it reads `not idle; not judged`.
-Thermal pressure adds `throttled`; power and thermal state never
-vote.
+own GPU accounting (`ioreg`, 4 Hz) and GPU power from the same
+energy counters `powermetrics` reports, minus the sudo: the `os`
+line. HEALTHY requires the engine's log, the OS meter and the
+speed signature to agree; a full offload claim over a GPU the OS
+saw stay flat gets CONFLICTING EVIDENCE (exit 5). A missing source
+abstains, and the line says which evidence is left.
 
 ## Explain a number
 
@@ -394,12 +376,11 @@ watch exits 4 to say so.
 ## Context decay
 
 A tok/s number measured at a short context does not hold at depth:
-each token generated attends to the whole KV cache, so decode slows
-as the context fills. `--ctx-sweep` re-measures the three lanes at
-several context depths, each fed a prompt long enough to actually
-reach that depth (a short prompt at `-c 32768` fills nothing and
-would just measure the 4k number three times), and reports the
-slope. Measured here, Qwen3.5-9B Q4_K_M on Metal:
+decode slows as the context fills. `--ctx-sweep` re-measures the
+three lanes at several context depths, each fed a prompt long
+enough to actually reach that depth (a short prompt at `-c 32768`
+fills nothing and would just measure the 4k number three times),
+and reports the slope. Measured here, Qwen3.5-9B Q4_K_M on Metal:
 
 ```
 $ python3 picchio.py /tmp/models/Qwen3.5-9B-Q4_K_M.gguf --ctx-sweep --passes 2
@@ -413,9 +394,8 @@ SLOPE: decode fell 11% from 2531 to 21079 tokens (8x deeper): 20.0
   every token you generate.
 ```
 
-Prefill fell 30% too, its attention cost growing with the prompt,
-and the depth column is the token count the engine actually
-reached, not the `-c` ceiling.
+Prefill fell 30% too, and the depth column is the token count the
+engine actually reached, not the `-c` ceiling.
 
 ## Not just llama-bench
 
@@ -487,10 +467,6 @@ picchio on a machine that is otherwise idle.
 - Warm numbers drift between sessions: the 9B medians in this repo
   moved 5 to 8% between two recording rounds on an idle machine.
   More passes (`--passes 5`) tighten a single reading.
-- The sampler's cost was measured before it shipped: alternating 7
-  pass runs with sampling on and off left the decode difference
-  below run to run drift (adjacent pairs differed 0.0% and 0.4%),
-  which is why it samples at 4 Hz and stays on by default.
 - The os meter counts the whole GPU, not one process, so it only
   judges runs that started from an idle GPU.
 - The watts come from a private macOS framework (the same counters

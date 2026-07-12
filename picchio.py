@@ -33,6 +33,9 @@
 #   python3 picchio.py verify block.txt
 #                                       (re-derive a pasted block's own
 #                                        physics; flag it if it lies)
+#   python3 picchio.py watch --engine ollama
+#                                       (point the OS gpu meter at any
+#                                        running engine; no stderr parse)
 #
 # Needs: python3 (any recent one), plus llama.cpp on PATH or a local ollama.
 # Nothing else. No pip.
@@ -1717,6 +1720,196 @@ def verify_cli(argv):
     sys.exit(0 if verdict == "PASS" else 5)
 
 
+# ------------------------------------------------------------------- watch
+#
+# watch reads placement the engine-free way: it does not parse anyone's
+# stderr, it points the OS meter at a running process or the whole GPU
+# and reports what the silicon is doing. That makes it engine agnostic:
+# MLX, LM Studio, vLLM, a raw torch script, anything that generates can
+# be watched. ioreg meters the whole GPU, not one process, so watch
+# never claims per-process precision: it reports machine level truth and
+# says so, exactly the abstain discipline the measure-mode vote already
+# uses on a busy desktop.
+
+def pid_alive(pid):
+    try:
+        os.kill(pid, 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True  # exists, just owned by another user
+
+
+def proc_name(pid):
+    out = _cmd_out(["ps", "-p", str(pid), "-o", "comm="]).splitlines()
+    return os.path.basename(out[0]) if out and out[0] else "?"
+
+
+def ollama_loaded():
+    """The first model ollama currently has resident, or None with a
+    reason string. watch uses it only as a label for what is running."""
+    if not ollama_reachable():
+        return None, "no ollama is answering at {}".format(OLLAMA_HOST)
+    try:
+        models = ollama_api("/api/ps", timeout=5).get("models", [])
+    except (urllib.error.URLError, OSError, ValueError):
+        return None, "ollama did not answer /api/ps"
+    if not models:
+        return None, "ollama is running but no model is loaded"
+    return models[0].get("name") or models[0].get("model") or "?", None
+
+
+def watch_summary(samples):
+    """Distills a raw sample window into the machine level numbers watch
+    reports: no baseline step (the process is already running, there is
+    no clean before), just what the GPU did over the window."""
+    dev = [s["dev"] for s in samples if s.get("dev") is not None]
+    mem = [s["mem"] for s in samples if s.get("mem") is not None]
+    watts = [s.get("gpu_w") for s in samples]
+    return {
+        "n": len(samples),
+        "secs": samples[-1]["t"] - samples[0]["t"] if len(samples) >= 2
+        else 0.0,
+        "work_med": _med(dev), "work_peak": max(dev) if dev else None,
+        "work_min": min(dev) if dev else None,
+        "mem_gib": max(mem) / 1024 ** 3 if mem else None,
+        "watts": _med(watts), "throttled": False,
+    }
+
+
+def watch_verdict(summ, ctx):
+    """Machine level placement read: is the GPU doing the work. ctx is a
+    label for what is being watched (a process, an ollama model) or None
+    for the whole machine; when set, the whole-GPU caveat is spelled out
+    rather than pretending the number belongs to that one job."""
+    wm = summ["work_med"]
+    if wm is None:
+        return "GPU UNREADABLE", "the gpu meter returned no usable samples."
+    w = ", {:.1f} W".format(summ["watts"]) if summ["watts"] is not None else ""
+    if wm >= 50:
+        para = ("something is running kernels on the gpu (work {:.0f}% "
+                "median, peak {:.0f}%{}).".format(wm, summ["work_peak"], w))
+        if ctx:
+            para += (" ioreg meters the whole gpu, so this is machine level, "
+                     "not pinned to {}.".format(ctx))
+            if summ["work_min"] is not None and summ["work_min"] < 15:
+                para += " It fell idle between bursts, consistent with one job."
+        return "GPU BUSY", para
+    if wm < 15:
+        para = "the gpu ran at {:.0f}% median over the window.".format(wm)
+        para += (" If {} is generating tokens now, it is doing it on the cpu, "
+                 "not the gpu.".format(ctx) if ctx
+                 else " Nothing is driving the gpu right now.")
+        return "GPU IDLE", para
+    para = ("the gpu is lightly used (work {:.0f}% median, peak {:.0f}%{}): "
+            "partial offload, or another job sharing it.".format(
+                wm, summ["work_peak"], w))
+    if ctx:
+        para += " ioreg is whole-gpu; machine level only."
+    return "GPU MIXED", para
+
+
+def render_watch(ctx, summ, state, para):
+    out = ["picchio watch" + (": " + ctx if ctx else "")]
+    out.append("  window   {:.1f} s, {} samples at {:.0f} Hz  (whole "
+               "gpu)".format(summ["secs"], summ["n"], TELE_HZ))
+    parts = []
+    if summ["work_med"] is not None:
+        parts.append("work {:.0f}% median".format(summ["work_med"]))
+    if summ["work_peak"] is not None:
+        parts.append("peak {:.0f}%".format(summ["work_peak"]))
+    if summ["watts"] is not None:
+        parts.append("{:.1f} W".format(summ["watts"]))
+    if summ["throttled"]:
+        parts.append("throttled")
+    if parts:
+        out.append("  gpu      " + ", ".join(parts))
+    if summ["mem_gib"] is not None:
+        out.append("  memory   {:.1f} GiB in use by the gpu".format(
+            summ["mem_gib"]))
+    out += textwrap.wrap("{}: {}".format(state, para), width=WIDTH,
+                         subsequent_indent="  ")
+    return "\n".join(out)
+
+
+def watch(pid=None, engine=None, duration=None):
+    ctx = None
+    if engine is not None:
+        if engine != "ollama":
+            sys.exit("picchio watch: only --engine ollama is supported "
+                     "(any other engine: give its pid, or just watch the "
+                     "whole gpu with no argument).")
+        name, why = ollama_loaded()
+        if name is None:
+            sys.exit("picchio watch: {}. Load a model and generate, then "
+                     "watch.".format(why))
+        ctx = "ollama model " + name
+    if pid is not None:
+        if not pid_alive(pid):
+            sys.exit("picchio watch: no process with pid {}.".format(pid))
+        ctx = "{} (pid {})".format(proc_name(pid), pid)
+    sampler = telemetry_start()
+    if not isinstance(sampler, GpuSampler):
+        sys.exit("picchio watch: no gpu meter here ({}). watch needs the "
+                 "macos ioreg meter; on other platforms there is no engine "
+                 "free placement signal yet.".format(sampler.get("off", "?")))
+    # window: an explicit --for wins; otherwise watch until the pid exits
+    # (capped), or a short fixed window for the whole-gpu snapshot
+    if duration is None:
+        duration = 3600.0 if pid is not None else 6.0
+    sys.stderr.write("picchio watch: sampling the gpu{}{} ...\n".format(
+        " while " + ctx if ctx else "",
+        "" if pid is not None and duration >= 3600 else
+        " for {:.0f} s".format(duration)))
+    deadline = time.monotonic() + duration
+    try:
+        while True:
+            now = time.monotonic()
+            if now >= deadline or (pid is not None and not pid_alive(pid)):
+                break
+            time.sleep(min(0.25, deadline - now))
+    except KeyboardInterrupt:
+        pass
+    sampler.stop()
+    summ = watch_summary(sampler.samples)
+    summ["throttled"] = sampler._hot or thermal_raised()
+    state, para = watch_verdict(summ, ctx)
+    print(render_watch(ctx, summ, state, para))
+    # reuse the measure exit map's meaning: the gpu doing the work is 0,
+    # the gpu sitting idle while tokens are made is the fallback code (4)
+    sys.exit({"GPU IDLE": 4}.get(state, 0))
+
+
+def watch_cli(argv):
+    if argv[:1] in (["-h"], ["--help"]):
+        print("usage: picchio.py watch [PID] [--engine ollama] [--for SEC]\n"
+              "point the os gpu meter at a running inference process (or\n"
+              "the whole gpu) and report whether the gpu is doing the work,\n"
+              "without parsing any engine's output. engine agnostic: works\n"
+              "for mlx, lm studio, anything. macOS only (needs ioreg).")
+        sys.exit(0)
+    pid = engine = dur = None
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        if a == "--for" and i + 1 < len(argv):
+            try:
+                dur = float(argv[i + 1])
+            except ValueError:
+                sys.exit("picchio watch: --for wants a number of seconds.")
+            i += 2
+        elif a == "--engine" and i + 1 < len(argv):
+            engine, i = argv[i + 1], i + 2
+        elif a.isdigit():
+            pid, i = int(a), i + 1
+        else:
+            sys.exit("picchio watch: unexpected argument {!r}.\nusage: "
+                     "picchio.py watch [PID] [--engine ollama] "
+                     "[--for SEC]".format(a))
+    watch(pid, engine, dur)
+
+
 # ---------------------------------------------------------------- selftest
 
 def selftest():
@@ -1888,13 +2081,38 @@ def selftest():
     iv, iff = verify_block(parse_block(inv))
     if iv == "FLAG" and any("outrun" in x for x in iff):
         ve_ok += 1
+    # watch: synthetic sample windows pushed through the real summary and
+    # the real machine level judge (no gpu needed, ci safe)
+    wa_ok, wa_all = 0, 3
+
+    def synth_watch(dev_seq, mem, watt):
+        return [{"t": i * 0.25, "dev": d, "mem": mem, "gpu_w": watt}
+                for i, d in enumerate(dev_seq)]
+
+    # 1: a busy window reads BUSY and states the whole-gpu caveat
+    sb, pb = watch_verdict(watch_summary(
+        synth_watch([0, 98, 99, 97, 99, 98], int(6.5 * gib), 12.0)),
+        "runner (pid 1)")
+    if sb == "GPU BUSY" and "machine level" in pb:
+        wa_ok += 1
+    # 2: a flat window reads IDLE and names the cpu
+    si, pi = watch_verdict(watch_summary(
+        synth_watch([1, 2, 0, 3, 1, 2], 600 * 1024 ** 2, 0.03)),
+        "runner (pid 1)")
+    if si == "GPU IDLE" and "on the cpu" in pi:
+        wa_ok += 1
+    # 3: a middling window reads MIXED, not a false BUSY or IDLE
+    sm, _ = watch_verdict(watch_summary(
+        synth_watch([30, 35, 28, 40, 33], int(4.0 * gib), 6.0)), None)
+    if sm == "GPU MIXED":
+        wa_ok += 1
     print("parser fixtures {}/{}, verdict replay {}/{}, compare {}/{}, "
-          "telemetry {}/{}, verify {}/{}".format(
+          "telemetry {}/{}, verify {}/{}, watch {}/{}".format(
               fx_ok, fx_all, rp_ok, rp_all, cp_ok, cp_all,
-              te_ok, te_all, ve_ok, ve_all))
+              te_ok, te_all, ve_ok, ve_all, wa_ok, wa_all))
     sys.exit(0 if fx_ok == fx_all and rp_ok == rp_all and rp_all
              and cp_ok == cp_all and te_ok == te_all
-             and ve_ok == ve_all else 1)
+             and ve_ok == ve_all and wa_ok == wa_all else 1)
 
 
 # -------------------------------------------------------------------- main
@@ -1927,6 +2145,9 @@ def main():
         return
     if sys.argv[1:2] == ["verify"]:
         verify_cli(sys.argv[2:])
+        return
+    if sys.argv[1:2] == ["watch"]:
+        watch_cli(sys.argv[2:])
         return
     ap = argparse.ArgumentParser(
         prog="picchio",
@@ -1962,6 +2183,12 @@ def main():
             "  re-derive the physics a pasted verdict block claims and\n"
             "  flag it when placement, the speed signature, the os meter\n"
             "  and the headline do not describe the same run\n"
+            "\n"
+            "watch mode:\n"
+            "  picchio.py watch [PID] [--engine ollama] [--for SEC]\n"
+            "  point the os gpu meter at a running process or the whole\n"
+            "  gpu and report whether the gpu is doing the work, without\n"
+            "  parsing any engine's output (works for mlx, lm studio, ...)\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )

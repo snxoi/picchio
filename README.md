@@ -59,7 +59,7 @@ a .gguf path (`python3 picchio.py /path/to/model.gguf`) gets the
 full llama.cpp diagnosis, an ollama tag (`python3 picchio.py
 qwen3.5:9b`) gets measurement mode.
 
-No pip, no dependencies, no config. One Python file, 1933 lines,
+No pip, no dependencies, no config. One Python file, 2541 lines,
 stdlib only; python3 plus either llama.cpp or ollama is everything
 it needs. It runs your model three times with a fixed prompt (the
 first pass cold, the rest warm), reads the engine's own numbers
@@ -76,7 +76,8 @@ The parser is pinned by the raw logs in this repo:
 `python3 picchio.py --selftest` replays the unedited engine output
 in [examples/raw/](examples/raw/) and must reproduce every committed
 verdict block line for line (9 pass fixtures, 3 blocks, 4 compare
-checks, 5 synthetic telemetry timelines); the badge runs it on every push.
+checks, 5 synthetic telemetry timelines, 4 verify checks, 3 watch
+checks, 2 context-sweep checks); the badge runs it on every push.
 
 ## The three numbers
 
@@ -324,12 +325,108 @@ level does not print placement lines, so give your command
 `--verbose` (`-lv 4` is enough on llama-server); when no placement
 evidence ever appears, the exit summary says so instead of judging.
 
+## Verify: catch a faked verdict
+
+A verdict block is a claim about physics, and physics leaves
+fingerprints. `picchio verify` reads a pasted block back and re-derives
+those fingerprints from the block's own numbers: placement, the
+prefill/decode ratio, the OS meter and the headline each say whether
+the GPU did the work, and an honest block has all of them describing
+the same run. It cannot prove a block is real (numbers can be faked so
+they agree), but it catches a block that contradicts itself, which is
+what editing one number to look better almost always does.
+
+Take a real CPU-fallback block and flip one line, the placement, to
+claim the full GPU:
+
+```
+$ python3 picchio.py verify forged.txt
+picchio verify: forged.txt
+  model     Qwen3.5-9B-Q4_K_M.gguf
+  claim     ENGAGED (full gpu), headline HEALTHY
+  signature prefill 26.8 = 2.2x decode 12.2, wallclock 3.0
+  os        gpu idle 8%, work 5%, mem +0.3 GiB, 0.1 W
+VERDICT: FLAG. 2 physical contradictions in this block:
+  - claims full gpu but prefill is only 2.2x decode, a cpu shaped
+    ratio (a real gpu run is 20x+)
+  - claims full gpu but its own os line saw the gpu at 5% while
+    the tokens were made
+This block contradicts itself; do not trust its numbers as one run.
+```
+
+One edit, two independent witnesses. Prefill at 2.2x decode is a CPU
+signature (a real GPU run is 20x and up), and the OS meter left in the
+block saw the GPU flat at 5% while the tokens were made. A genuine
+block passes: `verify` exits 0 when the sources agree, 5 when they
+fight, the same code a live run gets for conflicting evidence. It reads
+a file or stdin, so it drops straight into a paste-review habit.
+
+## Watch: any engine, no log parsing
+
+The verdict block reads placement from llama.cpp's or ollama's own
+output. `picchio watch` does it without reading anyone's output at all:
+it points the macOS GPU meter at a running process, or the whole GPU,
+and reports whether the silicon is actually working. That makes it
+engine agnostic. MLX, LM Studio, vLLM, a raw PyTorch script, anything
+that generates can be watched.
+
+```
+$ python3 picchio.py watch --engine ollama --for 8
+picchio watch: ollama model qwen3.5:9b
+  window   8.1 s, 33 samples at 4 Hz  (whole gpu)
+  gpu      work 98% median, peak 98%, 10.6 W
+  memory   7.2 GiB in use by the gpu
+GPU BUSY: something is running kernels on the gpu (work 98%
+  median, peak 98%, 10.6 W). ioreg meters the whole gpu, so this
+  is machine level, not pinned to ollama model qwen3.5:9b.
+```
+
+Give it a PID (`picchio watch 12345`) to bound the window to that
+process's lifetime, or nothing to snapshot the whole GPU. It is honest
+about its own limit: ioreg meters the whole GPU, not one process, so
+watch reports machine level truth and says so rather than pretending a
+number belongs to one job. When the GPU sits idle while you know
+something is generating, that is the answer, it is on the CPU, and
+watch exits 4 to say so.
+
+## The number decays with context
+
+Almost every tok/s number you see was measured at a short context and
+quoted as if it held at any length. It does not: each token decode
+generates attends to the whole KV cache, so decode slows as the context
+fills. `--ctx-sweep` re-measures the three lanes at several context
+depths, each fed a prompt long enough to actually reach that depth (a
+short prompt at `-c 32768` fills nothing and would just measure the 4k
+number three times), and reports the slope. Measured here, Qwen3.5-9B
+Q4_K_M on Metal:
+
+```
+$ python3 picchio.py /tmp/models/Qwen3.5-9B-Q4_K_M.gguf --ctx-sweep --passes 2
+ctx sweep  Qwen3.5-9B-Q4_K_M.gguf, llama.cpp b9430
+depth   ctx         prefill        decode     wallclock
+  2531  4096    559.9 tok/s    20.0 tok/s    10.4 tok/s
+ 10439  16384   434.4 tok/s    18.7 tok/s     4.0 tok/s
+ 21079  32768   393.4 tok/s    17.9 tok/s     2.1 tok/s
+SLOPE: decode fell 11% from 2531 to 21079 tokens (8x deeper): 20.0
+  -> 17.9 tok/s. Long context is not free; the kv cache taxes
+  every token you generate.
+```
+
+Decode fell 11% from 2.5k to 21k tokens, prefill 30% (its attention
+cost grows with the prompt), and wallclock collapsed because reading a
+21k token prompt dominates the whole run. The depth column is the token
+count the engine actually reached, not the `-c` ceiling. Whether your
+own curve is flat or steep, that is the point: it is a number no forum
+post carries, and now you can measure it instead of guessing.
+
 ## Options
 
 ```
 picchio MODEL [flags] [-- engine args]
 picchio guard [--keep-logs DIR] -- <command...>
 picchio compare A.txt B.txt
+picchio verify [FILE]
+picchio watch [PID] [--engine ollama] [--for SEC]
 
 MODEL            a .gguf path (llama.cpp) or an ollama model tag;
                  with no arguments, lists runnable models it can find
@@ -337,7 +434,13 @@ guard            wrap your own llama.cpp command: warn on degraded
                  placement, never kill it, summarize when it exits
 compare          diff two saved verdict blocks variable by variable,
                  blame the first config difference on the ladder
+verify           re-derive a pasted block's own physics and flag it
+                 when its sources contradict each other
+watch            point the OS GPU meter at a process or the whole GPU
+                 and report placement, no engine log parsing (macOS)
 --passes N       measurement passes, first one cold (default 3)
+--ctx-sweep LIST re-measure the lanes at each context depth in LIST
+                 (default 4096,16384,32768) and report the decay slope
 --explain TOKS   classify a number you saw against the measured lanes
 --keep-logs DIR  save each pass's raw engine output into DIR, plus
                  the sampled GPU curve (telemetry.json) on macOS
@@ -449,9 +552,12 @@ run picchio on a machine that is otherwise idle.
 The tested path is one Apple Silicon machine, llama.cpp and ollama.
 Linux parsing (CUDA and Vulkan log lines, /proc hardware info) is
 written but has not touched real hardware; if you run it there, I
-want the verdict block either way. MLX, LM Studio and remote servers
-are out of scope; very old llama.cpp builds may only get partial
-evidence, and the block names whatever is missing.
+want the verdict block either way. The full verdict block, with its
+three lanes and cold-start breakdown, is llama.cpp and ollama only;
+MLX, LM Studio and other engines get placement truth through `watch`
+(the OS meter needs no engine log) but not the lane table. Very old
+llama.cpp builds may only get partial evidence, and the block names
+whatever is missing.
 
 Passes run back to back, so the first is only a true cold start if
 the model was not recently loaded; the block then says weights
@@ -473,7 +579,9 @@ case the watts drop off the line and everything else keeps working.
 Exit codes, for scripting: 0 healthy or no evidence, 2 could not
 run, 3 partial offload, 4 silent CPU fallback, 5 conflicting
 evidence; guard passes the wrapped command's own exit code through,
-and compare exits 0 once both blocks parse.
+compare exits 0 once both blocks parse, verify exits 0 when a block
+is self-consistent and 5 when its sources fight, and watch exits 0
+when the GPU is working and 4 when it sits idle.
 
 ## License
 

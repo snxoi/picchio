@@ -1,0 +1,1874 @@
+0.00.045.995 I llama_completion: llama backend init
+0.00.045.999 I llama_completion: load the model and apply lora adapter, if any
+0.00.046.006 I common_init_result: fitting params to device memory ...
+0.00.046.006 I common_init_result: (for bugs during this step try to reproduce them with -fit off, or provide --verbose logs if the bug only occurs with -fit on)
+0.00.046.008 I common_params_fit_impl: getting device memory data for initial parameters:
+0.00.077.522 I llama_model_loader: loaded meta data with 46 key-value pairs and 427 tensors from /tmp/models/Qwen3.5-9B-Q4_K_M.gguf (version GGUF V3 (latest))
+0.00.077.535 I llama_model_loader: Dumping metadata keys/values. Note: KV overrides do not apply in this output.
+0.00.077.536 I llama_model_loader: - kv   0:                       general.architecture str              = qwen35
+0.00.077.537 I llama_model_loader: - kv   1:                               general.type str              = model
+0.00.077.537 I llama_model_loader: - kv   2:                               general.name str              = Qwen3.5-9B
+0.00.077.537 I llama_model_loader: - kv   3:                           general.basename str              = Qwen3.5-9B
+0.00.077.538 I llama_model_loader: - kv   4:                       general.quantized_by str              = Unsloth
+0.00.077.538 I llama_model_loader: - kv   5:                         general.size_label str              = 9B
+0.00.077.539 I llama_model_loader: - kv   6:                            general.license str              = apache-2.0
+0.00.077.540 I llama_model_loader: - kv   7:                       general.license.link str              = https://huggingface.co/Qwen/Qwen3.5-9...
+0.00.077.541 I llama_model_loader: - kv   8:                           general.repo_url str              = https://huggingface.co/unsloth
+0.00.077.542 I llama_model_loader: - kv   9:                   general.base_model.count u32              = 1
+0.00.077.543 I llama_model_loader: - kv  10:                  general.base_model.0.name str              = Qwen3.5 9B
+0.00.077.543 I llama_model_loader: - kv  11:          general.base_model.0.organization str              = Qwen
+0.00.077.544 I llama_model_loader: - kv  12:              general.base_model.0.repo_url str              = https://huggingface.co/Qwen/Qwen3.5-9B
+0.00.077.548 I llama_model_loader: - kv  13:                               general.tags arr[str,2]       = ["unsloth", "image-text-to-text"]
+0.00.077.550 I llama_model_loader: - kv  14:                         qwen35.block_count u32              = 32
+0.00.077.550 I llama_model_loader: - kv  15:                      qwen35.context_length u32              = 262144
+0.00.077.551 I llama_model_loader: - kv  16:                    qwen35.embedding_length u32              = 4096
+0.00.077.551 I llama_model_loader: - kv  17:                 qwen35.feed_forward_length u32              = 12288
+0.00.077.551 I llama_model_loader: - kv  18:                qwen35.attention.head_count u32              = 16
+0.00.077.552 I llama_model_loader: - kv  19:             qwen35.attention.head_count_kv u32              = 4
+0.00.077.553 I llama_model_loader: - kv  20:             qwen35.rope.dimension_sections arr[i32,4]       = [11, 11, 10, 0]
+0.00.077.555 I llama_model_loader: - kv  21:                      qwen35.rope.freq_base f32              = 10000000.000000
+0.00.077.556 I llama_model_loader: - kv  22:    qwen35.attention.layer_norm_rms_epsilon f32              = 0.000001
+0.00.077.557 I llama_model_loader: - kv  23:                qwen35.attention.key_length u32              = 256
+0.00.077.557 I llama_model_loader: - kv  24:              qwen35.attention.value_length u32              = 256
+0.00.077.557 I llama_model_loader: - kv  25:                     qwen35.ssm.conv_kernel u32              = 4
+0.00.077.558 I llama_model_loader: - kv  26:                      qwen35.ssm.state_size u32              = 128
+0.00.077.558 I llama_model_loader: - kv  27:                     qwen35.ssm.group_count u32              = 16
+0.00.077.558 I llama_model_loader: - kv  28:                  qwen35.ssm.time_step_rank u32              = 32
+0.00.077.558 I llama_model_loader: - kv  29:                      qwen35.ssm.inner_size u32              = 4096
+0.00.077.559 I llama_model_loader: - kv  30:             qwen35.full_attention_interval u32              = 4
+0.00.077.559 I llama_model_loader: - kv  31:                qwen35.rope.dimension_count u32              = 64
+0.00.077.559 I llama_model_loader: - kv  32:                       tokenizer.ggml.model str              = gpt2
+0.00.077.559 I llama_model_loader: - kv  33:                         tokenizer.ggml.pre str              = qwen35
+0.00.099.807 I llama_model_loader: - kv  34:                      tokenizer.ggml.tokens arr[str,248320]  = ["!", "\"", "#", "$", "%", "&", "'", ...
+0.00.104.153 I llama_model_loader: - kv  35:                  tokenizer.ggml.token_type arr[i32,248320]  = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ...
+0.00.125.569 I llama_model_loader: - kv  36:                      tokenizer.ggml.merges arr[str,247587]  = ["Ġ Ġ", "ĠĠ ĠĠ", "i n", "Ġ t",...
+0.00.125.573 I llama_model_loader: - kv  37:                tokenizer.ggml.eos_token_id u32              = 248046
+0.00.125.573 I llama_model_loader: - kv  38:            tokenizer.ggml.padding_token_id u32              = 248055
+0.00.125.580 I llama_model_loader: - kv  39:                    tokenizer.chat_template str              = {%- set image_count = namespace(value...
+0.00.125.581 I llama_model_loader: - kv  40:               general.quantization_version u32              = 2
+0.00.125.581 I llama_model_loader: - kv  41:                          general.file_type u32              = 15
+0.00.125.581 I llama_model_loader: - kv  42:                      quantize.imatrix.file str              = Qwen3.5-9B-GGUF/imatrix_unsloth.gguf
+0.00.125.582 I llama_model_loader: - kv  43:                   quantize.imatrix.dataset str              = unsloth_calibration_Qwen3.5-9B.txt
+0.00.125.582 I llama_model_loader: - kv  44:             quantize.imatrix.entries_count u32              = 248
+0.00.125.583 I llama_model_loader: - kv  45:              quantize.imatrix.chunks_count u32              = 80
+0.00.125.583 I llama_model_loader: - type  f32:  177 tensors
+0.00.125.584 I llama_model_loader: - type q8_0:   48 tensors
+0.00.125.584 I llama_model_loader: - type q4_K:  132 tensors
+0.00.125.584 I llama_model_loader: - type q5_K:   48 tensors
+0.00.125.584 I llama_model_loader: - type q6_K:   22 tensors
+0.00.125.585 I print_info: file format = GGUF V3 (latest)
+0.00.125.586 I print_info: file type   = Q4_K - Medium
+0.00.125.587 I print_info: file size   = 5.28 GiB (5.07 BPW) 
+0.00.125.607 I llama_prepare_model_devices: using device MTL0 (Apple M5) (unknown id) - 25558 MiB free
+0.00.171.531 D init_tokenizer: initializing tokenizer for type 2
+0.00.178.059 I load: 0 unused tokens
+0.00.178.076 D load: control token: 248076 '<|audio_pad|>' is not marked as EOG
+0.00.178.076 D load: control token: 248075 '<tts_text_bos_single>' is not marked as EOG
+0.00.178.076 D load: control token: 248074 '<tts_text_eod>' is not marked as EOG
+0.00.178.076 D load: control token: 248073 '<tts_text_bos>' is not marked as EOG
+0.00.178.077 D load: control token: 248072 '<tts_pad>' is not marked as EOG
+0.00.178.077 D load: control token: 248062 '<|fim_suffix|>' is not marked as EOG
+0.00.178.077 D load: control token: 248061 '<|fim_middle|>' is not marked as EOG
+0.00.178.078 D load: control token: 248060 '<|fim_prefix|>' is not marked as EOG
+0.00.178.078 D load: control token: 248056 '<|image_pad|>' is not marked as EOG
+0.00.178.078 D load: control token: 248055 '<|vision_pad|>' is not marked as EOG
+0.00.178.078 D load: control token: 248054 '<|vision_end|>' is not marked as EOG
+0.00.178.078 D load: control token: 248052 '<|quad_end|>' is not marked as EOG
+0.00.178.078 D load: control token: 248050 '<|box_end|>' is not marked as EOG
+0.00.178.079 D load: control token: 248049 '<|box_start|>' is not marked as EOG
+0.00.178.079 D load: control token: 248048 '<|object_ref_end|>' is not marked as EOG
+0.00.178.079 D load: control token: 248047 '<|object_ref_start|>' is not marked as EOG
+0.00.178.079 D load: control token: 248045 '<|im_start|>' is not marked as EOG
+0.00.180.755 D load: control token: 248071 '<|audio_end|>' is not marked as EOG
+0.00.186.046 D load: control token: 248051 '<|quad_start|>' is not marked as EOG
+0.00.187.600 D load: control token: 248070 '<|audio_start|>' is not marked as EOG
+0.00.187.911 D load: control token: 248053 '<|vision_start|>' is not marked as EOG
+0.00.188.388 D load: control token: 248057 '<|video_pad|>' is not marked as EOG
+0.00.192.202 I load: printing all EOG tokens:
+0.00.192.205 I load:   - 248044 ('<|endoftext|>')
+0.00.192.205 I load:   - 248046 ('<|im_end|>')
+0.00.192.206 I load:   - 248063 ('<|fim_pad|>')
+0.00.192.206 I load:   - 248064 ('<|repo_name|>')
+0.00.192.206 I load:   - 248065 ('<|file_sep|>')
+0.00.192.412 I load: special tokens cache size = 33
+0.00.230.912 I load: token to piece cache size = 1.7581 MB
+0.00.230.920 I print_info: arch                  = qwen35
+0.00.230.920 I print_info: vocab_only            = 0
+0.00.230.920 I print_info: no_alloc              = 1
+0.00.230.920 I print_info: n_ctx_train           = 262144
+0.00.230.921 I print_info: n_embd                = 4096
+0.00.230.921 I print_info: n_embd_inp            = 4096
+0.00.230.921 I print_info: n_layer               = 32
+0.00.230.924 I print_info: n_head                = 16
+0.00.230.925 I print_info: n_head_kv             = 4
+0.00.230.925 I print_info: n_rot                 = 64
+0.00.230.926 I print_info: n_swa                 = 0
+0.00.230.926 I print_info: is_swa_any            = 0
+0.00.230.926 I print_info: n_embd_head_k         = 256
+0.00.230.926 I print_info: n_embd_head_v         = 256
+0.00.230.927 I print_info: n_gqa                 = 4
+0.00.230.928 I print_info: n_embd_k_gqa          = 1024
+0.00.230.928 I print_info: n_embd_v_gqa          = 1024
+0.00.230.929 I print_info: f_norm_eps            = 0.0e+00
+0.00.230.929 I print_info: f_norm_rms_eps        = 1.0e-06
+0.00.230.929 I print_info: f_clamp_kqv           = 0.0e+00
+0.00.230.930 I print_info: f_max_alibi_bias      = 0.0e+00
+0.00.230.930 I print_info: f_logit_scale         = 0.0e+00
+0.00.230.930 I print_info: f_attn_scale          = 0.0e+00
+0.00.230.930 I print_info: f_attn_value_scale    = 0.0000
+0.00.230.931 I print_info: n_ff                  = 12288
+0.00.230.931 I print_info: n_expert              = 0
+0.00.230.931 I print_info: n_expert_used         = 0
+0.00.230.931 I print_info: n_expert_groups       = 0
+0.00.230.931 I print_info: n_group_used          = 0
+0.00.230.931 I print_info: causal attn           = 1
+0.00.230.934 I print_info: pooling type          = -1
+0.00.230.934 I print_info: rope type             = 40
+0.00.230.934 I print_info: rope scaling          = linear
+0.00.230.935 I print_info: freq_base_train       = 10000000.0
+0.00.230.935 I print_info: freq_scale_train      = 1
+0.00.230.935 I print_info: n_ctx_orig_yarn       = 262144
+0.00.230.935 I print_info: rope_yarn_log_mul     = 0.0000
+0.00.230.935 I print_info: rope_finetuned        = unknown
+0.00.230.936 I print_info: mrope sections        = [11, 11, 10, 0]
+0.00.230.936 I print_info: ssm_d_conv            = 4
+0.00.230.936 I print_info: ssm_d_inner           = 4096
+0.00.230.936 I print_info: ssm_d_state           = 128
+0.00.230.936 I print_info: ssm_dt_rank           = 32
+0.00.230.936 I print_info: ssm_n_group           = 16
+0.00.230.937 I print_info: ssm_dt_b_c_rms        = 0
+0.00.230.937 I print_info: model type            = 9B
+0.00.230.937 I print_info: model params          = 8.95 B
+0.00.230.937 I print_info: general.name          = Qwen3.5-9B
+0.00.230.938 I print_info: vocab type            = BPE
+0.00.230.938 I print_info: n_vocab               = 248320
+0.00.230.938 I print_info: n_merges              = 247587
+0.00.230.940 I print_info: BOS token             = 11 ','
+0.00.230.940 I print_info: EOS token             = 248046 '<|im_end|>'
+0.00.230.940 I print_info: EOT token             = 248046 '<|im_end|>'
+0.00.230.940 I print_info: PAD token             = 248055 '<|vision_pad|>'
+0.00.230.941 I print_info: LF token              = 198 'Ċ'
+0.00.230.941 I print_info: FIM PRE token         = 248060 '<|fim_prefix|>'
+0.00.230.941 I print_info: FIM SUF token         = 248062 '<|fim_suffix|>'
+0.00.230.941 I print_info: FIM MID token         = 248061 '<|fim_middle|>'
+0.00.230.941 I print_info: FIM PAD token         = 248063 '<|fim_pad|>'
+0.00.230.942 I print_info: FIM REP token         = 248064 '<|repo_name|>'
+0.00.230.942 I print_info: FIM SEP token         = 248065 '<|file_sep|>'
+0.00.230.942 I print_info: EOG token             = 248044 '<|endoftext|>'
+0.00.230.942 I print_info: EOG token             = 248046 '<|im_end|>'
+0.00.230.942 I print_info: EOG token             = 248063 '<|fim_pad|>'
+0.00.230.943 I print_info: EOG token             = 248064 '<|repo_name|>'
+0.00.230.943 I print_info: EOG token             = 248065 '<|file_sep|>'
+0.00.230.943 I print_info: max token length      = 256
+0.00.230.943 I load_tensors: loading model tensors, this can take a while... (mmap = false, direct_io = false)
+0.00.230.964 D load_tensors: layer   0 assigned to device MTL0, is_swa = 0
+0.00.230.965 D load_tensors: layer   1 assigned to device MTL0, is_swa = 0
+0.00.230.965 D load_tensors: layer   2 assigned to device MTL0, is_swa = 0
+0.00.230.965 D load_tensors: layer   3 assigned to device MTL0, is_swa = 0
+0.00.230.966 D load_tensors: layer   4 assigned to device MTL0, is_swa = 0
+0.00.230.966 D load_tensors: layer   5 assigned to device MTL0, is_swa = 0
+0.00.230.966 D load_tensors: layer   6 assigned to device MTL0, is_swa = 0
+0.00.230.966 D load_tensors: layer   7 assigned to device MTL0, is_swa = 0
+0.00.230.966 D load_tensors: layer   8 assigned to device MTL0, is_swa = 0
+0.00.230.966 D load_tensors: layer   9 assigned to device MTL0, is_swa = 0
+0.00.230.967 D load_tensors: layer  10 assigned to device MTL0, is_swa = 0
+0.00.230.967 D load_tensors: layer  11 assigned to device MTL0, is_swa = 0
+0.00.230.967 D load_tensors: layer  12 assigned to device MTL0, is_swa = 0
+0.00.230.967 D load_tensors: layer  13 assigned to device MTL0, is_swa = 0
+0.00.230.973 D load_tensors: layer  14 assigned to device MTL0, is_swa = 0
+0.00.230.975 D load_tensors: layer  15 assigned to device MTL0, is_swa = 0
+0.00.230.975 D load_tensors: layer  16 assigned to device MTL0, is_swa = 0
+0.00.230.975 D load_tensors: layer  17 assigned to device MTL0, is_swa = 0
+0.00.230.975 D load_tensors: layer  18 assigned to device MTL0, is_swa = 0
+0.00.230.976 D load_tensors: layer  19 assigned to device MTL0, is_swa = 0
+0.00.230.976 D load_tensors: layer  20 assigned to device MTL0, is_swa = 0
+0.00.230.976 D load_tensors: layer  21 assigned to device MTL0, is_swa = 0
+0.00.230.976 D load_tensors: layer  22 assigned to device MTL0, is_swa = 0
+0.00.230.976 D load_tensors: layer  23 assigned to device MTL0, is_swa = 0
+0.00.230.976 D load_tensors: layer  24 assigned to device MTL0, is_swa = 0
+0.00.230.977 D load_tensors: layer  25 assigned to device MTL0, is_swa = 0
+0.00.230.977 D load_tensors: layer  26 assigned to device MTL0, is_swa = 0
+0.00.230.977 D load_tensors: layer  27 assigned to device MTL0, is_swa = 0
+0.00.230.977 D load_tensors: layer  28 assigned to device MTL0, is_swa = 0
+0.00.230.977 D load_tensors: layer  29 assigned to device MTL0, is_swa = 0
+0.00.230.977 D load_tensors: layer  30 assigned to device MTL0, is_swa = 0
+0.00.230.978 D load_tensors: layer  31 assigned to device MTL0, is_swa = 0
+0.00.230.978 D load_tensors: layer  32 assigned to device MTL0, is_swa = 0
+0.00.230.999 D create_tensor: loading tensor token_embd.weight
+0.00.231.006 D create_tensor: loading tensor output_norm.weight
+0.00.231.011 D create_tensor: loading tensor output.weight
+0.00.231.016 D create_tensor: loading tensor blk.0.attn_norm.weight
+0.00.231.022 D create_tensor: loading tensor blk.0.post_attention_norm.weight
+0.00.231.027 D create_tensor: loading tensor blk.0.attn_qkv.weight
+0.00.231.031 D create_tensor: loading tensor blk.0.attn_gate.weight
+0.00.231.037 D create_tensor: loading tensor blk.0.ssm_conv1d.weight
+0.00.231.041 D create_tensor: loading tensor blk.0.ssm_dt.bias
+0.00.231.045 D create_tensor: loading tensor blk.0.ssm_a
+0.00.231.049 D create_tensor: loading tensor blk.0.ssm_beta.weight
+0.00.231.052 D create_tensor: loading tensor blk.0.ssm_alpha.weight
+0.00.231.056 D create_tensor: loading tensor blk.0.ssm_norm.weight
+0.00.231.060 D create_tensor: loading tensor blk.0.ssm_out.weight
+0.00.231.064 D create_tensor: loading tensor blk.0.ffn_gate.weight
+0.00.231.068 D create_tensor: loading tensor blk.0.ffn_down.weight
+0.00.231.072 D create_tensor: loading tensor blk.0.ffn_up.weight
+0.00.231.076 D create_tensor: loading tensor blk.1.attn_norm.weight
+0.00.231.081 D create_tensor: loading tensor blk.1.post_attention_norm.weight
+0.00.231.085 D create_tensor: loading tensor blk.1.attn_qkv.weight
+0.00.231.089 D create_tensor: loading tensor blk.1.attn_gate.weight
+0.00.231.093 D create_tensor: loading tensor blk.1.ssm_conv1d.weight
+0.00.231.099 D create_tensor: loading tensor blk.1.ssm_dt.bias
+0.00.231.103 D create_tensor: loading tensor blk.1.ssm_a
+0.00.231.107 D create_tensor: loading tensor blk.1.ssm_beta.weight
+0.00.231.110 D create_tensor: loading tensor blk.1.ssm_alpha.weight
+0.00.231.114 D create_tensor: loading tensor blk.1.ssm_norm.weight
+0.00.231.118 D create_tensor: loading tensor blk.1.ssm_out.weight
+0.00.231.122 D create_tensor: loading tensor blk.1.ffn_gate.weight
+0.00.231.127 D create_tensor: loading tensor blk.1.ffn_down.weight
+0.00.231.130 D create_tensor: loading tensor blk.1.ffn_up.weight
+0.00.231.134 D create_tensor: loading tensor blk.2.attn_norm.weight
+0.00.231.140 D create_tensor: loading tensor blk.2.post_attention_norm.weight
+0.00.231.144 D create_tensor: loading tensor blk.2.attn_qkv.weight
+0.00.231.148 D create_tensor: loading tensor blk.2.attn_gate.weight
+0.00.231.152 D create_tensor: loading tensor blk.2.ssm_conv1d.weight
+0.00.231.156 D create_tensor: loading tensor blk.2.ssm_dt.bias
+0.00.231.160 D create_tensor: loading tensor blk.2.ssm_a
+0.00.231.165 D create_tensor: loading tensor blk.2.ssm_beta.weight
+0.00.231.169 D create_tensor: loading tensor blk.2.ssm_alpha.weight
+0.00.231.173 D create_tensor: loading tensor blk.2.ssm_norm.weight
+0.00.231.176 D create_tensor: loading tensor blk.2.ssm_out.weight
+0.00.231.181 D create_tensor: loading tensor blk.2.ffn_gate.weight
+0.00.231.185 D create_tensor: loading tensor blk.2.ffn_down.weight
+0.00.231.189 D create_tensor: loading tensor blk.2.ffn_up.weight
+0.00.231.193 D create_tensor: loading tensor blk.3.attn_norm.weight
+0.00.231.199 D create_tensor: loading tensor blk.3.post_attention_norm.weight
+0.00.231.206 D create_tensor: loading tensor blk.3.attn_q.weight
+0.00.231.210 D create_tensor: loading tensor blk.3.attn_k.weight
+0.00.231.214 D create_tensor: loading tensor blk.3.attn_v.weight
+0.00.231.221 D create_tensor: loading tensor blk.3.attn_output.weight
+0.00.231.226 D create_tensor: loading tensor blk.3.attn_q_norm.weight
+0.00.231.230 D create_tensor: loading tensor blk.3.attn_k_norm.weight
+0.00.231.235 D create_tensor: loading tensor blk.3.ffn_gate.weight
+0.00.231.239 D create_tensor: loading tensor blk.3.ffn_down.weight
+0.00.231.243 D create_tensor: loading tensor blk.3.ffn_up.weight
+0.00.231.248 D create_tensor: loading tensor blk.4.attn_norm.weight
+0.00.231.252 D create_tensor: loading tensor blk.4.post_attention_norm.weight
+0.00.231.256 D create_tensor: loading tensor blk.4.attn_qkv.weight
+0.00.231.260 D create_tensor: loading tensor blk.4.attn_gate.weight
+0.00.231.264 D create_tensor: loading tensor blk.4.ssm_conv1d.weight
+0.00.231.268 D create_tensor: loading tensor blk.4.ssm_dt.bias
+0.00.231.273 D create_tensor: loading tensor blk.4.ssm_a
+0.00.231.277 D create_tensor: loading tensor blk.4.ssm_beta.weight
+0.00.231.281 D create_tensor: loading tensor blk.4.ssm_alpha.weight
+0.00.231.285 D create_tensor: loading tensor blk.4.ssm_norm.weight
+0.00.231.289 D create_tensor: loading tensor blk.4.ssm_out.weight
+0.00.231.294 D create_tensor: loading tensor blk.4.ffn_gate.weight
+0.00.231.298 D create_tensor: loading tensor blk.4.ffn_down.weight
+0.00.231.302 D create_tensor: loading tensor blk.4.ffn_up.weight
+0.00.231.306 D create_tensor: loading tensor blk.5.attn_norm.weight
+0.00.231.310 D create_tensor: loading tensor blk.5.post_attention_norm.weight
+0.00.231.315 D create_tensor: loading tensor blk.5.attn_qkv.weight
+0.00.231.319 D create_tensor: loading tensor blk.5.attn_gate.weight
+0.00.231.324 D create_tensor: loading tensor blk.5.ssm_conv1d.weight
+0.00.231.328 D create_tensor: loading tensor blk.5.ssm_dt.bias
+0.00.231.332 D create_tensor: loading tensor blk.5.ssm_a
+0.00.231.336 D create_tensor: loading tensor blk.5.ssm_beta.weight
+0.00.231.340 D create_tensor: loading tensor blk.5.ssm_alpha.weight
+0.00.231.345 D create_tensor: loading tensor blk.5.ssm_norm.weight
+0.00.231.349 D create_tensor: loading tensor blk.5.ssm_out.weight
+0.00.231.354 D create_tensor: loading tensor blk.5.ffn_gate.weight
+0.00.231.358 D create_tensor: loading tensor blk.5.ffn_down.weight
+0.00.231.362 D create_tensor: loading tensor blk.5.ffn_up.weight
+0.00.231.366 D create_tensor: loading tensor blk.6.attn_norm.weight
+0.00.231.371 D create_tensor: loading tensor blk.6.post_attention_norm.weight
+0.00.231.375 D create_tensor: loading tensor blk.6.attn_qkv.weight
+0.00.231.379 D create_tensor: loading tensor blk.6.attn_gate.weight
+0.00.231.384 D create_tensor: loading tensor blk.6.ssm_conv1d.weight
+0.00.231.388 D create_tensor: loading tensor blk.6.ssm_dt.bias
+0.00.231.392 D create_tensor: loading tensor blk.6.ssm_a
+0.00.231.397 D create_tensor: loading tensor blk.6.ssm_beta.weight
+0.00.231.402 D create_tensor: loading tensor blk.6.ssm_alpha.weight
+0.00.231.407 D create_tensor: loading tensor blk.6.ssm_norm.weight
+0.00.231.411 D create_tensor: loading tensor blk.6.ssm_out.weight
+0.00.231.415 D create_tensor: loading tensor blk.6.ffn_gate.weight
+0.00.231.419 D create_tensor: loading tensor blk.6.ffn_down.weight
+0.00.231.427 D create_tensor: loading tensor blk.6.ffn_up.weight
+0.00.231.432 D create_tensor: loading tensor blk.7.attn_norm.weight
+0.00.231.436 D create_tensor: loading tensor blk.7.post_attention_norm.weight
+0.00.231.442 D create_tensor: loading tensor blk.7.attn_q.weight
+0.00.231.446 D create_tensor: loading tensor blk.7.attn_k.weight
+0.00.231.450 D create_tensor: loading tensor blk.7.attn_v.weight
+0.00.231.466 D create_tensor: loading tensor blk.7.attn_output.weight
+0.00.231.471 D create_tensor: loading tensor blk.7.attn_q_norm.weight
+0.00.231.476 D create_tensor: loading tensor blk.7.attn_k_norm.weight
+0.00.231.481 D create_tensor: loading tensor blk.7.ffn_gate.weight
+0.00.231.485 D create_tensor: loading tensor blk.7.ffn_down.weight
+0.00.231.491 D create_tensor: loading tensor blk.7.ffn_up.weight
+0.00.231.495 D create_tensor: loading tensor blk.8.attn_norm.weight
+0.00.231.500 D create_tensor: loading tensor blk.8.post_attention_norm.weight
+0.00.231.504 D create_tensor: loading tensor blk.8.attn_qkv.weight
+0.00.231.508 D create_tensor: loading tensor blk.8.attn_gate.weight
+0.00.231.512 D create_tensor: loading tensor blk.8.ssm_conv1d.weight
+0.00.231.516 D create_tensor: loading tensor blk.8.ssm_dt.bias
+0.00.231.520 D create_tensor: loading tensor blk.8.ssm_a
+0.00.231.525 D create_tensor: loading tensor blk.8.ssm_beta.weight
+0.00.231.528 D create_tensor: loading tensor blk.8.ssm_alpha.weight
+0.00.231.533 D create_tensor: loading tensor blk.8.ssm_norm.weight
+0.00.231.537 D create_tensor: loading tensor blk.8.ssm_out.weight
+0.00.231.541 D create_tensor: loading tensor blk.8.ffn_gate.weight
+0.00.231.545 D create_tensor: loading tensor blk.8.ffn_down.weight
+0.00.231.548 D create_tensor: loading tensor blk.8.ffn_up.weight
+0.00.231.553 D create_tensor: loading tensor blk.9.attn_norm.weight
+0.00.231.557 D create_tensor: loading tensor blk.9.post_attention_norm.weight
+0.00.231.562 D create_tensor: loading tensor blk.9.attn_qkv.weight
+0.00.231.572 D create_tensor: loading tensor blk.9.attn_gate.weight
+0.00.231.577 D create_tensor: loading tensor blk.9.ssm_conv1d.weight
+0.00.231.581 D create_tensor: loading tensor blk.9.ssm_dt.bias
+0.00.231.585 D create_tensor: loading tensor blk.9.ssm_a
+0.00.231.589 D create_tensor: loading tensor blk.9.ssm_beta.weight
+0.00.231.593 D create_tensor: loading tensor blk.9.ssm_alpha.weight
+0.00.231.598 D create_tensor: loading tensor blk.9.ssm_norm.weight
+0.00.231.601 D create_tensor: loading tensor blk.9.ssm_out.weight
+0.00.231.606 D create_tensor: loading tensor blk.9.ffn_gate.weight
+0.00.231.610 D create_tensor: loading tensor blk.9.ffn_down.weight
+0.00.231.614 D create_tensor: loading tensor blk.9.ffn_up.weight
+0.00.231.617 D create_tensor: loading tensor blk.10.attn_norm.weight
+0.00.231.622 D create_tensor: loading tensor blk.10.post_attention_norm.weight
+0.00.231.637 D create_tensor: loading tensor blk.10.attn_qkv.weight
+0.00.231.641 D create_tensor: loading tensor blk.10.attn_gate.weight
+0.00.231.646 D create_tensor: loading tensor blk.10.ssm_conv1d.weight
+0.00.231.652 D create_tensor: loading tensor blk.10.ssm_dt.bias
+0.00.231.657 D create_tensor: loading tensor blk.10.ssm_a
+0.00.231.663 D create_tensor: loading tensor blk.10.ssm_beta.weight
+0.00.231.667 D create_tensor: loading tensor blk.10.ssm_alpha.weight
+0.00.231.671 D create_tensor: loading tensor blk.10.ssm_norm.weight
+0.00.231.675 D create_tensor: loading tensor blk.10.ssm_out.weight
+0.00.231.680 D create_tensor: loading tensor blk.10.ffn_gate.weight
+0.00.231.683 D create_tensor: loading tensor blk.10.ffn_down.weight
+0.00.231.691 D create_tensor: loading tensor blk.10.ffn_up.weight
+0.00.231.695 D create_tensor: loading tensor blk.11.attn_norm.weight
+0.00.231.700 D create_tensor: loading tensor blk.11.post_attention_norm.weight
+0.00.231.705 D create_tensor: loading tensor blk.11.attn_q.weight
+0.00.231.709 D create_tensor: loading tensor blk.11.attn_k.weight
+0.00.231.713 D create_tensor: loading tensor blk.11.attn_v.weight
+0.00.231.719 D create_tensor: loading tensor blk.11.attn_output.weight
+0.00.231.723 D create_tensor: loading tensor blk.11.attn_q_norm.weight
+0.00.231.728 D create_tensor: loading tensor blk.11.attn_k_norm.weight
+0.00.231.732 D create_tensor: loading tensor blk.11.ffn_gate.weight
+0.00.231.735 D create_tensor: loading tensor blk.11.ffn_down.weight
+0.00.231.739 D create_tensor: loading tensor blk.11.ffn_up.weight
+0.00.231.743 D create_tensor: loading tensor blk.12.attn_norm.weight
+0.00.231.748 D create_tensor: loading tensor blk.12.post_attention_norm.weight
+0.00.231.752 D create_tensor: loading tensor blk.12.attn_qkv.weight
+0.00.231.756 D create_tensor: loading tensor blk.12.attn_gate.weight
+0.00.231.761 D create_tensor: loading tensor blk.12.ssm_conv1d.weight
+0.00.231.765 D create_tensor: loading tensor blk.12.ssm_dt.bias
+0.00.231.769 D create_tensor: loading tensor blk.12.ssm_a
+0.00.231.773 D create_tensor: loading tensor blk.12.ssm_beta.weight
+0.00.231.777 D create_tensor: loading tensor blk.12.ssm_alpha.weight
+0.00.231.780 D create_tensor: loading tensor blk.12.ssm_norm.weight
+0.00.231.785 D create_tensor: loading tensor blk.12.ssm_out.weight
+0.00.231.789 D create_tensor: loading tensor blk.12.ffn_gate.weight
+0.00.231.794 D create_tensor: loading tensor blk.12.ffn_down.weight
+0.00.231.797 D create_tensor: loading tensor blk.12.ffn_up.weight
+0.00.231.802 D create_tensor: loading tensor blk.13.attn_norm.weight
+0.00.231.806 D create_tensor: loading tensor blk.13.post_attention_norm.weight
+0.00.231.811 D create_tensor: loading tensor blk.13.attn_qkv.weight
+0.00.231.814 D create_tensor: loading tensor blk.13.attn_gate.weight
+0.00.231.818 D create_tensor: loading tensor blk.13.ssm_conv1d.weight
+0.00.231.823 D create_tensor: loading tensor blk.13.ssm_dt.bias
+0.00.231.827 D create_tensor: loading tensor blk.13.ssm_a
+0.00.231.831 D create_tensor: loading tensor blk.13.ssm_beta.weight
+0.00.231.835 D create_tensor: loading tensor blk.13.ssm_alpha.weight
+0.00.231.840 D create_tensor: loading tensor blk.13.ssm_norm.weight
+0.00.231.843 D create_tensor: loading tensor blk.13.ssm_out.weight
+0.00.231.847 D create_tensor: loading tensor blk.13.ffn_gate.weight
+0.00.231.851 D create_tensor: loading tensor blk.13.ffn_down.weight
+0.00.231.854 D create_tensor: loading tensor blk.13.ffn_up.weight
+0.00.231.859 D create_tensor: loading tensor blk.14.attn_norm.weight
+0.00.231.863 D create_tensor: loading tensor blk.14.post_attention_norm.weight
+0.00.231.868 D create_tensor: loading tensor blk.14.attn_qkv.weight
+0.00.231.872 D create_tensor: loading tensor blk.14.attn_gate.weight
+0.00.231.876 D create_tensor: loading tensor blk.14.ssm_conv1d.weight
+0.00.231.889 D create_tensor: loading tensor blk.14.ssm_dt.bias
+0.00.231.900 D create_tensor: loading tensor blk.14.ssm_a
+0.00.231.906 D create_tensor: loading tensor blk.14.ssm_beta.weight
+0.00.231.912 D create_tensor: loading tensor blk.14.ssm_alpha.weight
+0.00.231.916 D create_tensor: loading tensor blk.14.ssm_norm.weight
+0.00.231.922 D create_tensor: loading tensor blk.14.ssm_out.weight
+0.00.231.927 D create_tensor: loading tensor blk.14.ffn_gate.weight
+0.00.231.932 D create_tensor: loading tensor blk.14.ffn_down.weight
+0.00.231.936 D create_tensor: loading tensor blk.14.ffn_up.weight
+0.00.231.942 D create_tensor: loading tensor blk.15.attn_norm.weight
+0.00.231.948 D create_tensor: loading tensor blk.15.post_attention_norm.weight
+0.00.231.954 D create_tensor: loading tensor blk.15.attn_q.weight
+0.00.231.960 D create_tensor: loading tensor blk.15.attn_k.weight
+0.00.231.965 D create_tensor: loading tensor blk.15.attn_v.weight
+0.00.231.971 D create_tensor: loading tensor blk.15.attn_output.weight
+0.00.231.976 D create_tensor: loading tensor blk.15.attn_q_norm.weight
+0.00.231.984 D create_tensor: loading tensor blk.15.attn_k_norm.weight
+0.00.231.990 D create_tensor: loading tensor blk.15.ffn_gate.weight
+0.00.231.994 D create_tensor: loading tensor blk.15.ffn_down.weight
+0.00.232.004 D create_tensor: loading tensor blk.15.ffn_up.weight
+0.00.232.011 D create_tensor: loading tensor blk.16.attn_norm.weight
+0.00.232.017 D create_tensor: loading tensor blk.16.post_attention_norm.weight
+0.00.232.021 D create_tensor: loading tensor blk.16.attn_qkv.weight
+0.00.232.025 D create_tensor: loading tensor blk.16.attn_gate.weight
+0.00.232.030 D create_tensor: loading tensor blk.16.ssm_conv1d.weight
+0.00.232.034 D create_tensor: loading tensor blk.16.ssm_dt.bias
+0.00.232.038 D create_tensor: loading tensor blk.16.ssm_a
+0.00.232.043 D create_tensor: loading tensor blk.16.ssm_beta.weight
+0.00.232.047 D create_tensor: loading tensor blk.16.ssm_alpha.weight
+0.00.232.053 D create_tensor: loading tensor blk.16.ssm_norm.weight
+0.00.232.058 D create_tensor: loading tensor blk.16.ssm_out.weight
+0.00.232.063 D create_tensor: loading tensor blk.16.ffn_gate.weight
+0.00.232.066 D create_tensor: loading tensor blk.16.ffn_down.weight
+0.00.232.071 D create_tensor: loading tensor blk.16.ffn_up.weight
+0.00.232.074 D create_tensor: loading tensor blk.17.attn_norm.weight
+0.00.232.078 D create_tensor: loading tensor blk.17.post_attention_norm.weight
+0.00.232.083 D create_tensor: loading tensor blk.17.attn_qkv.weight
+0.00.232.087 D create_tensor: loading tensor blk.17.attn_gate.weight
+0.00.232.092 D create_tensor: loading tensor blk.17.ssm_conv1d.weight
+0.00.232.097 D create_tensor: loading tensor blk.17.ssm_dt.bias
+0.00.232.101 D create_tensor: loading tensor blk.17.ssm_a
+0.00.232.106 D create_tensor: loading tensor blk.17.ssm_beta.weight
+0.00.232.110 D create_tensor: loading tensor blk.17.ssm_alpha.weight
+0.00.232.114 D create_tensor: loading tensor blk.17.ssm_norm.weight
+0.00.232.119 D create_tensor: loading tensor blk.17.ssm_out.weight
+0.00.232.122 D create_tensor: loading tensor blk.17.ffn_gate.weight
+0.00.232.128 D create_tensor: loading tensor blk.17.ffn_down.weight
+0.00.232.132 D create_tensor: loading tensor blk.17.ffn_up.weight
+0.00.232.137 D create_tensor: loading tensor blk.18.attn_norm.weight
+0.00.232.142 D create_tensor: loading tensor blk.18.post_attention_norm.weight
+0.00.232.147 D create_tensor: loading tensor blk.18.attn_qkv.weight
+0.00.232.151 D create_tensor: loading tensor blk.18.attn_gate.weight
+0.00.232.156 D create_tensor: loading tensor blk.18.ssm_conv1d.weight
+0.00.232.160 D create_tensor: loading tensor blk.18.ssm_dt.bias
+0.00.232.165 D create_tensor: loading tensor blk.18.ssm_a
+0.00.232.168 D create_tensor: loading tensor blk.18.ssm_beta.weight
+0.00.232.173 D create_tensor: loading tensor blk.18.ssm_alpha.weight
+0.00.232.177 D create_tensor: loading tensor blk.18.ssm_norm.weight
+0.00.232.182 D create_tensor: loading tensor blk.18.ssm_out.weight
+0.00.232.186 D create_tensor: loading tensor blk.18.ffn_gate.weight
+0.00.232.191 D create_tensor: loading tensor blk.18.ffn_down.weight
+0.00.232.195 D create_tensor: loading tensor blk.18.ffn_up.weight
+0.00.232.199 D create_tensor: loading tensor blk.19.attn_norm.weight
+0.00.232.204 D create_tensor: loading tensor blk.19.post_attention_norm.weight
+0.00.232.210 D create_tensor: loading tensor blk.19.attn_q.weight
+0.00.232.219 D create_tensor: loading tensor blk.19.attn_k.weight
+0.00.232.223 D create_tensor: loading tensor blk.19.attn_v.weight
+0.00.232.229 D create_tensor: loading tensor blk.19.attn_output.weight
+0.00.232.234 D create_tensor: loading tensor blk.19.attn_q_norm.weight
+0.00.232.240 D create_tensor: loading tensor blk.19.attn_k_norm.weight
+0.00.232.245 D create_tensor: loading tensor blk.19.ffn_gate.weight
+0.00.232.249 D create_tensor: loading tensor blk.19.ffn_down.weight
+0.00.232.254 D create_tensor: loading tensor blk.19.ffn_up.weight
+0.00.232.261 D create_tensor: loading tensor blk.20.attn_norm.weight
+0.00.232.266 D create_tensor: loading tensor blk.20.post_attention_norm.weight
+0.00.232.276 D create_tensor: loading tensor blk.20.attn_qkv.weight
+0.00.232.284 D create_tensor: loading tensor blk.20.attn_gate.weight
+0.00.232.290 D create_tensor: loading tensor blk.20.ssm_conv1d.weight
+0.00.232.297 D create_tensor: loading tensor blk.20.ssm_dt.bias
+0.00.232.301 D create_tensor: loading tensor blk.20.ssm_a
+0.00.232.307 D create_tensor: loading tensor blk.20.ssm_beta.weight
+0.00.232.311 D create_tensor: loading tensor blk.20.ssm_alpha.weight
+0.00.232.317 D create_tensor: loading tensor blk.20.ssm_norm.weight
+0.00.232.322 D create_tensor: loading tensor blk.20.ssm_out.weight
+0.00.232.327 D create_tensor: loading tensor blk.20.ffn_gate.weight
+0.00.232.331 D create_tensor: loading tensor blk.20.ffn_down.weight
+0.00.232.335 D create_tensor: loading tensor blk.20.ffn_up.weight
+0.00.232.340 D create_tensor: loading tensor blk.21.attn_norm.weight
+0.00.232.345 D create_tensor: loading tensor blk.21.post_attention_norm.weight
+0.00.232.351 D create_tensor: loading tensor blk.21.attn_qkv.weight
+0.00.232.355 D create_tensor: loading tensor blk.21.attn_gate.weight
+0.00.232.365 D create_tensor: loading tensor blk.21.ssm_conv1d.weight
+0.00.232.371 D create_tensor: loading tensor blk.21.ssm_dt.bias
+0.00.232.375 D create_tensor: loading tensor blk.21.ssm_a
+0.00.232.379 D create_tensor: loading tensor blk.21.ssm_beta.weight
+0.00.232.383 D create_tensor: loading tensor blk.21.ssm_alpha.weight
+0.00.232.388 D create_tensor: loading tensor blk.21.ssm_norm.weight
+0.00.232.392 D create_tensor: loading tensor blk.21.ssm_out.weight
+0.00.232.397 D create_tensor: loading tensor blk.21.ffn_gate.weight
+0.00.232.401 D create_tensor: loading tensor blk.21.ffn_down.weight
+0.00.232.406 D create_tensor: loading tensor blk.21.ffn_up.weight
+0.00.232.410 D create_tensor: loading tensor blk.22.attn_norm.weight
+0.00.232.415 D create_tensor: loading tensor blk.22.post_attention_norm.weight
+0.00.232.419 D create_tensor: loading tensor blk.22.attn_qkv.weight
+0.00.232.424 D create_tensor: loading tensor blk.22.attn_gate.weight
+0.00.232.430 D create_tensor: loading tensor blk.22.ssm_conv1d.weight
+0.00.232.435 D create_tensor: loading tensor blk.22.ssm_dt.bias
+0.00.232.439 D create_tensor: loading tensor blk.22.ssm_a
+0.00.232.444 D create_tensor: loading tensor blk.22.ssm_beta.weight
+0.00.232.448 D create_tensor: loading tensor blk.22.ssm_alpha.weight
+0.00.232.452 D create_tensor: loading tensor blk.22.ssm_norm.weight
+0.00.232.457 D create_tensor: loading tensor blk.22.ssm_out.weight
+0.00.232.460 D create_tensor: loading tensor blk.22.ffn_gate.weight
+0.00.232.465 D create_tensor: loading tensor blk.22.ffn_down.weight
+0.00.232.470 D create_tensor: loading tensor blk.22.ffn_up.weight
+0.00.232.474 D create_tensor: loading tensor blk.23.attn_norm.weight
+0.00.232.479 D create_tensor: loading tensor blk.23.post_attention_norm.weight
+0.00.232.484 D create_tensor: loading tensor blk.23.attn_q.weight
+0.00.232.490 D create_tensor: loading tensor blk.23.attn_k.weight
+0.00.232.495 D create_tensor: loading tensor blk.23.attn_v.weight
+0.00.232.506 D create_tensor: loading tensor blk.23.attn_output.weight
+0.00.232.513 D create_tensor: loading tensor blk.23.attn_q_norm.weight
+0.00.232.519 D create_tensor: loading tensor blk.23.attn_k_norm.weight
+0.00.232.524 D create_tensor: loading tensor blk.23.ffn_gate.weight
+0.00.232.529 D create_tensor: loading tensor blk.23.ffn_down.weight
+0.00.232.533 D create_tensor: loading tensor blk.23.ffn_up.weight
+0.00.232.538 D create_tensor: loading tensor blk.24.attn_norm.weight
+0.00.232.546 D create_tensor: loading tensor blk.24.post_attention_norm.weight
+0.00.232.554 D create_tensor: loading tensor blk.24.attn_qkv.weight
+0.00.232.559 D create_tensor: loading tensor blk.24.attn_gate.weight
+0.00.232.563 D create_tensor: loading tensor blk.24.ssm_conv1d.weight
+0.00.232.568 D create_tensor: loading tensor blk.24.ssm_dt.bias
+0.00.232.572 D create_tensor: loading tensor blk.24.ssm_a
+0.00.232.576 D create_tensor: loading tensor blk.24.ssm_beta.weight
+0.00.232.580 D create_tensor: loading tensor blk.24.ssm_alpha.weight
+0.00.232.585 D create_tensor: loading tensor blk.24.ssm_norm.weight
+0.00.232.589 D create_tensor: loading tensor blk.24.ssm_out.weight
+0.00.232.593 D create_tensor: loading tensor blk.24.ffn_gate.weight
+0.00.232.598 D create_tensor: loading tensor blk.24.ffn_down.weight
+0.00.232.603 D create_tensor: loading tensor blk.24.ffn_up.weight
+0.00.232.607 D create_tensor: loading tensor blk.25.attn_norm.weight
+0.00.232.612 D create_tensor: loading tensor blk.25.post_attention_norm.weight
+0.00.232.617 D create_tensor: loading tensor blk.25.attn_qkv.weight
+0.00.232.622 D create_tensor: loading tensor blk.25.attn_gate.weight
+0.00.232.627 D create_tensor: loading tensor blk.25.ssm_conv1d.weight
+0.00.232.632 D create_tensor: loading tensor blk.25.ssm_dt.bias
+0.00.232.636 D create_tensor: loading tensor blk.25.ssm_a
+0.00.232.641 D create_tensor: loading tensor blk.25.ssm_beta.weight
+0.00.232.646 D create_tensor: loading tensor blk.25.ssm_alpha.weight
+0.00.232.651 D create_tensor: loading tensor blk.25.ssm_norm.weight
+0.00.232.656 D create_tensor: loading tensor blk.25.ssm_out.weight
+0.00.232.660 D create_tensor: loading tensor blk.25.ffn_gate.weight
+0.00.232.665 D create_tensor: loading tensor blk.25.ffn_down.weight
+0.00.232.668 D create_tensor: loading tensor blk.25.ffn_up.weight
+0.00.232.678 D create_tensor: loading tensor blk.26.attn_norm.weight
+0.00.232.683 D create_tensor: loading tensor blk.26.post_attention_norm.weight
+0.00.232.687 D create_tensor: loading tensor blk.26.attn_qkv.weight
+0.00.232.692 D create_tensor: loading tensor blk.26.attn_gate.weight
+0.00.232.697 D create_tensor: loading tensor blk.26.ssm_conv1d.weight
+0.00.232.701 D create_tensor: loading tensor blk.26.ssm_dt.bias
+0.00.232.705 D create_tensor: loading tensor blk.26.ssm_a
+0.00.232.710 D create_tensor: loading tensor blk.26.ssm_beta.weight
+0.00.232.715 D create_tensor: loading tensor blk.26.ssm_alpha.weight
+0.00.232.720 D create_tensor: loading tensor blk.26.ssm_norm.weight
+0.00.232.724 D create_tensor: loading tensor blk.26.ssm_out.weight
+0.00.232.729 D create_tensor: loading tensor blk.26.ffn_gate.weight
+0.00.232.733 D create_tensor: loading tensor blk.26.ffn_down.weight
+0.00.232.738 D create_tensor: loading tensor blk.26.ffn_up.weight
+0.00.232.743 D create_tensor: loading tensor blk.27.attn_norm.weight
+0.00.232.747 D create_tensor: loading tensor blk.27.post_attention_norm.weight
+0.00.232.753 D create_tensor: loading tensor blk.27.attn_q.weight
+0.00.232.757 D create_tensor: loading tensor blk.27.attn_k.weight
+0.00.232.762 D create_tensor: loading tensor blk.27.attn_v.weight
+0.00.232.769 D create_tensor: loading tensor blk.27.attn_output.weight
+0.00.232.774 D create_tensor: loading tensor blk.27.attn_q_norm.weight
+0.00.232.779 D create_tensor: loading tensor blk.27.attn_k_norm.weight
+0.00.232.785 D create_tensor: loading tensor blk.27.ffn_gate.weight
+0.00.232.789 D create_tensor: loading tensor blk.27.ffn_down.weight
+0.00.232.794 D create_tensor: loading tensor blk.27.ffn_up.weight
+0.00.232.798 D create_tensor: loading tensor blk.28.attn_norm.weight
+0.00.232.803 D create_tensor: loading tensor blk.28.post_attention_norm.weight
+0.00.232.809 D create_tensor: loading tensor blk.28.attn_qkv.weight
+0.00.232.814 D create_tensor: loading tensor blk.28.attn_gate.weight
+0.00.232.818 D create_tensor: loading tensor blk.28.ssm_conv1d.weight
+0.00.232.824 D create_tensor: loading tensor blk.28.ssm_dt.bias
+0.00.232.828 D create_tensor: loading tensor blk.28.ssm_a
+0.00.232.833 D create_tensor: loading tensor blk.28.ssm_beta.weight
+0.00.232.838 D create_tensor: loading tensor blk.28.ssm_alpha.weight
+0.00.232.843 D create_tensor: loading tensor blk.28.ssm_norm.weight
+0.00.232.847 D create_tensor: loading tensor blk.28.ssm_out.weight
+0.00.232.852 D create_tensor: loading tensor blk.28.ffn_gate.weight
+0.00.232.856 D create_tensor: loading tensor blk.28.ffn_down.weight
+0.00.232.861 D create_tensor: loading tensor blk.28.ffn_up.weight
+0.00.232.865 D create_tensor: loading tensor blk.29.attn_norm.weight
+0.00.232.870 D create_tensor: loading tensor blk.29.post_attention_norm.weight
+0.00.232.874 D create_tensor: loading tensor blk.29.attn_qkv.weight
+0.00.232.879 D create_tensor: loading tensor blk.29.attn_gate.weight
+0.00.232.884 D create_tensor: loading tensor blk.29.ssm_conv1d.weight
+0.00.232.889 D create_tensor: loading tensor blk.29.ssm_dt.bias
+0.00.232.894 D create_tensor: loading tensor blk.29.ssm_a
+0.00.232.898 D create_tensor: loading tensor blk.29.ssm_beta.weight
+0.00.232.903 D create_tensor: loading tensor blk.29.ssm_alpha.weight
+0.00.232.908 D create_tensor: loading tensor blk.29.ssm_norm.weight
+0.00.232.916 D create_tensor: loading tensor blk.29.ssm_out.weight
+0.00.232.924 D create_tensor: loading tensor blk.29.ffn_gate.weight
+0.00.232.929 D create_tensor: loading tensor blk.29.ffn_down.weight
+0.00.232.933 D create_tensor: loading tensor blk.29.ffn_up.weight
+0.00.232.939 D create_tensor: loading tensor blk.30.attn_norm.weight
+0.00.232.944 D create_tensor: loading tensor blk.30.post_attention_norm.weight
+0.00.232.949 D create_tensor: loading tensor blk.30.attn_qkv.weight
+0.00.232.954 D create_tensor: loading tensor blk.30.attn_gate.weight
+0.00.232.959 D create_tensor: loading tensor blk.30.ssm_conv1d.weight
+0.00.232.964 D create_tensor: loading tensor blk.30.ssm_dt.bias
+0.00.232.972 D create_tensor: loading tensor blk.30.ssm_a
+0.00.232.976 D create_tensor: loading tensor blk.30.ssm_beta.weight
+0.00.232.981 D create_tensor: loading tensor blk.30.ssm_alpha.weight
+0.00.232.987 D create_tensor: loading tensor blk.30.ssm_norm.weight
+0.00.232.991 D create_tensor: loading tensor blk.30.ssm_out.weight
+0.00.232.996 D create_tensor: loading tensor blk.30.ffn_gate.weight
+0.00.233.000 D create_tensor: loading tensor blk.30.ffn_down.weight
+0.00.233.005 D create_tensor: loading tensor blk.30.ffn_up.weight
+0.00.233.010 D create_tensor: loading tensor blk.31.attn_norm.weight
+0.00.233.015 D create_tensor: loading tensor blk.31.post_attention_norm.weight
+0.00.233.021 D create_tensor: loading tensor blk.31.attn_q.weight
+0.00.233.026 D create_tensor: loading tensor blk.31.attn_k.weight
+0.00.233.030 D create_tensor: loading tensor blk.31.attn_v.weight
+0.00.233.038 D create_tensor: loading tensor blk.31.attn_output.weight
+0.00.233.043 D create_tensor: loading tensor blk.31.attn_q_norm.weight
+0.00.233.047 D create_tensor: loading tensor blk.31.attn_k_norm.weight
+0.00.233.056 D create_tensor: loading tensor blk.31.ffn_gate.weight
+0.00.233.061 D create_tensor: loading tensor blk.31.ffn_down.weight
+0.00.233.065 D create_tensor: loading tensor blk.31.ffn_up.weight
+0.00.233.424 D done_getting_tensors: tensor 'token_embd.weight' (q4_K) (and 0 others) cannot be used with preferred buffer type CPU_REPACK, using CPU instead
+0.00.233.458 I load_tensors: offloading output layer to GPU
+0.00.233.458 I load_tensors: offloading 31 repeating layers to GPU
+0.00.233.459 I load_tensors: offloaded 33/33 layers to GPU
+0.00.233.459 I load_tensors:          CPU model buffer size =     0.00 MiB
+0.00.233.460 I load_tensors:         MTL0 model buffer size =     0.00 MiB
+0.00.234.414 I llama_context: constructing llama_context
+0.00.234.415 I llama_context: n_seq_max     = 1
+0.00.234.416 I llama_context: n_ctx         = 4096
+0.00.234.416 I llama_context: n_ctx_seq     = 4096
+0.00.234.416 I llama_context: n_batch       = 2048
+0.00.234.416 I llama_context: n_ubatch      = 512
+0.00.234.416 I llama_context: causal_attn   = 1
+0.00.234.416 I llama_context: flash_attn    = auto
+0.00.234.417 I llama_context: kv_unified    = false
+0.00.234.417 I llama_context: freq_base     = 10000000.0
+0.00.234.417 I llama_context: freq_scale    = 1
+0.00.234.418 I llama_context: n_rs_seq      = 0
+0.00.234.418 W llama_context: n_ctx_seq (4096) < n_ctx_train (262144) -- the full capacity of the model will not be utilized
+0.00.234.418 I ggml_metal_init: allocating
+0.00.234.446 I ggml_metal_init: found device: Apple M5
+0.00.234.449 I ggml_metal_init: picking default device: Apple M5
+0.00.234.473 I ggml_metal_init: use fusion         = true
+0.00.234.473 I ggml_metal_init: use concurrency    = true
+0.00.234.473 I ggml_metal_init: use graph optimize = true
+0.00.234.482 D set_abort_callback: call
+0.00.234.563 I llama_context:        CPU  output buffer size =     0.95 MiB
+0.00.234.593 D llama_kv_cache: layer   0: filtered
+0.00.234.593 D llama_kv_cache: layer   1: filtered
+0.00.234.594 D llama_kv_cache: layer   2: filtered
+0.00.234.594 D llama_kv_cache: layer   3: dev = MTL0
+0.00.234.597 D llama_kv_cache: layer   4: filtered
+0.00.234.597 D llama_kv_cache: layer   5: filtered
+0.00.234.597 D llama_kv_cache: layer   6: filtered
+0.00.234.597 D llama_kv_cache: layer   7: dev = MTL0
+0.00.234.598 D llama_kv_cache: layer   8: filtered
+0.00.234.598 D llama_kv_cache: layer   9: filtered
+0.00.234.599 D llama_kv_cache: layer  10: filtered
+0.00.234.599 D llama_kv_cache: layer  11: dev = MTL0
+0.00.234.600 D llama_kv_cache: layer  12: filtered
+0.00.234.601 D llama_kv_cache: layer  13: filtered
+0.00.234.601 D llama_kv_cache: layer  14: filtered
+0.00.234.601 D llama_kv_cache: layer  15: dev = MTL0
+0.00.234.602 D llama_kv_cache: layer  16: filtered
+0.00.234.603 D llama_kv_cache: layer  17: filtered
+0.00.234.603 D llama_kv_cache: layer  18: filtered
+0.00.234.603 D llama_kv_cache: layer  19: dev = MTL0
+0.00.234.604 D llama_kv_cache: layer  20: filtered
+0.00.234.604 D llama_kv_cache: layer  21: filtered
+0.00.234.604 D llama_kv_cache: layer  22: filtered
+0.00.234.604 D llama_kv_cache: layer  23: dev = MTL0
+0.00.234.605 D llama_kv_cache: layer  24: filtered
+0.00.234.605 D llama_kv_cache: layer  25: filtered
+0.00.234.605 D llama_kv_cache: layer  26: filtered
+0.00.234.605 D llama_kv_cache: layer  27: dev = MTL0
+0.00.234.606 D llama_kv_cache: layer  28: filtered
+0.00.234.606 D llama_kv_cache: layer  29: filtered
+0.00.234.606 D llama_kv_cache: layer  30: filtered
+0.00.234.606 D llama_kv_cache: layer  31: dev = MTL0
+0.00.234.607 I llama_kv_cache:       MTL0 KV buffer size =     0.00 MiB
+0.00.234.608 I llama_kv_cache: size =  128.00 MiB (  4096 cells,   8 layers,  1/1 seqs), K (f16):   64.00 MiB, V (f16):   64.00 MiB
+0.00.234.609 I llama_kv_cache: attn_rot_k = 0, n_embd_head_k_all = 256
+0.00.234.609 I llama_kv_cache: attn_rot_v = 0, n_embd_head_k_all = 256
+0.00.234.610 D llama_memory_recurrent, layer   0: dev = MTL0
+0.00.234.612 D llama_memory_recurrent, layer   1: dev = MTL0
+0.00.234.613 D llama_memory_recurrent, layer   2: dev = MTL0
+0.00.234.613 D llama_memory_recurrent: layer   3: skipped
+0.00.234.613 D llama_memory_recurrent, layer   4: dev = MTL0
+0.00.234.614 D llama_memory_recurrent, layer   5: dev = MTL0
+0.00.234.614 D llama_memory_recurrent, layer   6: dev = MTL0
+0.00.234.614 D llama_memory_recurrent: layer   7: skipped
+0.00.234.614 D llama_memory_recurrent, layer   8: dev = MTL0
+0.00.234.615 D llama_memory_recurrent, layer   9: dev = MTL0
+0.00.234.615 D llama_memory_recurrent, layer  10: dev = MTL0
+0.00.234.615 D llama_memory_recurrent: layer  11: skipped
+0.00.234.615 D llama_memory_recurrent, layer  12: dev = MTL0
+0.00.234.615 D llama_memory_recurrent, layer  13: dev = MTL0
+0.00.234.616 D llama_memory_recurrent, layer  14: dev = MTL0
+0.00.234.616 D llama_memory_recurrent: layer  15: skipped
+0.00.234.616 D llama_memory_recurrent, layer  16: dev = MTL0
+0.00.234.616 D llama_memory_recurrent, layer  17: dev = MTL0
+0.00.234.617 D llama_memory_recurrent, layer  18: dev = MTL0
+0.00.234.618 D llama_memory_recurrent: layer  19: skipped
+0.00.234.618 D llama_memory_recurrent, layer  20: dev = MTL0
+0.00.234.619 D llama_memory_recurrent, layer  21: dev = MTL0
+0.00.234.619 D llama_memory_recurrent, layer  22: dev = MTL0
+0.00.234.619 D llama_memory_recurrent: layer  23: skipped
+0.00.234.619 D llama_memory_recurrent, layer  24: dev = MTL0
+0.00.234.619 D llama_memory_recurrent, layer  25: dev = MTL0
+0.00.234.620 D llama_memory_recurrent, layer  26: dev = MTL0
+0.00.234.620 D llama_memory_recurrent: layer  27: skipped
+0.00.234.620 D llama_memory_recurrent, layer  28: dev = MTL0
+0.00.234.620 D llama_memory_recurrent, layer  29: dev = MTL0
+0.00.234.621 D llama_memory_recurrent, layer  30: dev = MTL0
+0.00.234.621 D llama_memory_recurrent: layer  31: skipped
+0.00.237.235 I llama_memory_recurrent:       MTL0 RS buffer size =    50.25 MiB
+0.00.237.238 I llama_memory_recurrent: size =   50.25 MiB (     1 cells,  32 layers,  1 seqs  0 rs_seq), R (f32):    2.25 MiB, S (f32):   48.00 MiB
+0.00.237.239 D llama_context: enumerating backends
+0.00.237.240 D llama_context: backend_ptrs.size() = 3
+0.00.237.240 I sched_reserve: reserving ...
+0.00.237.241 D sched_reserve: max_nodes = 20480
+0.00.238.158 D sched_reserve: reserving full memory module
+0.00.238.163 D sched_reserve: worst-case: n_tokens = 512, n_seqs = 1, n_outputs = 1
+0.00.238.164 D graph_reserve: reserving a graph for ubatch with n_tokens =    1, n_seqs =  1, n_outputs =    1
+0.00.239.114 I sched_reserve: Flash Attention was auto, set to enabled
+0.00.239.117 I sched_reserve: resolving fused Gated Delta Net support:
+0.00.239.117 D graph_reserve: reserving a graph for ubatch with n_tokens =    1, n_seqs =  1, n_outputs =    1
+0.00.240.053 I sched_reserve: fused Gated Delta Net (autoregressive) enabled
+0.00.240.055 D graph_reserve: reserving a graph for ubatch with n_tokens =   16, n_seqs =  1, n_outputs =   16
+0.00.240.852 I sched_reserve: fused Gated Delta Net (chunked) enabled
+0.00.240.854 D graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  1, n_outputs =  512
+0.00.241.807 D graph_reserve: reserving a graph for ubatch with n_tokens =    1, n_seqs =  1, n_outputs =    1
+0.00.242.595 D graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  1, n_outputs =  512
+0.00.243.377 I sched_reserve:       MTL0 compute buffer size =   505.02 MiB
+0.00.243.378 I sched_reserve:        CPU compute buffer size =    20.02 MiB
+0.00.243.378 I sched_reserve:        CPU compute buffer size =    20.02 MiB
+0.00.243.378 I sched_reserve: graph nodes  = 1855
+0.00.243.378 I sched_reserve: graph splits = 2
+0.00.243.379 I sched_reserve: reserve took 6.14 ms, sched copies = 1
+0.00.243.475 I common_memory_breakdown_print: | memory breakdown [MiB] | total    free    self   model   context   compute    unaccounted |
+0.00.243.475 I common_memory_breakdown_print: |   - MTL0 (Apple M5)    | 25559 = 25508 + (5544 =  4861 +     178 +     505) +       -5493 |
+0.00.243.476 I common_memory_breakdown_print: |   - Host               |                   585 =   545 +       0 +      40                |
+0.00.243.497 I ggml_metal_free: deallocating
+0.00.259.484 I common_params_fit_impl: projected to use 5544 MiB of device memory vs. 25508 MiB of free device memory
+0.00.259.486 I common_params_fit_impl: will leave 19963 >= 1024 MiB of free device memory, no changes needed
+0.00.259.486 I common_fit_params: successfully fit params to free device memory
+0.00.259.493 I common_fit_params: fitting params to free memory took 0.21 seconds
+0.00.291.108 I llama_model_loader: loaded meta data with 46 key-value pairs and 427 tensors from /tmp/models/Qwen3.5-9B-Q4_K_M.gguf (version GGUF V3 (latest))
+0.00.291.120 I llama_model_loader: Dumping metadata keys/values. Note: KV overrides do not apply in this output.
+0.00.291.121 I llama_model_loader: - kv   0:                       general.architecture str              = qwen35
+0.00.291.122 I llama_model_loader: - kv   1:                               general.type str              = model
+0.00.291.125 I llama_model_loader: - kv   2:                               general.name str              = Qwen3.5-9B
+0.00.291.125 I llama_model_loader: - kv   3:                           general.basename str              = Qwen3.5-9B
+0.00.291.125 I llama_model_loader: - kv   4:                       general.quantized_by str              = Unsloth
+0.00.291.126 I llama_model_loader: - kv   5:                         general.size_label str              = 9B
+0.00.291.126 I llama_model_loader: - kv   6:                            general.license str              = apache-2.0
+0.00.291.127 I llama_model_loader: - kv   7:                       general.license.link str              = https://huggingface.co/Qwen/Qwen3.5-9...
+0.00.291.128 I llama_model_loader: - kv   8:                           general.repo_url str              = https://huggingface.co/unsloth
+0.00.291.128 I llama_model_loader: - kv   9:                   general.base_model.count u32              = 1
+0.00.291.129 I llama_model_loader: - kv  10:                  general.base_model.0.name str              = Qwen3.5 9B
+0.00.291.129 I llama_model_loader: - kv  11:          general.base_model.0.organization str              = Qwen
+0.00.291.132 I llama_model_loader: - kv  12:              general.base_model.0.repo_url str              = https://huggingface.co/Qwen/Qwen3.5-9B
+0.00.291.134 I llama_model_loader: - kv  13:                               general.tags arr[str,2]       = ["unsloth", "image-text-to-text"]
+0.00.291.135 I llama_model_loader: - kv  14:                         qwen35.block_count u32              = 32
+0.00.291.135 I llama_model_loader: - kv  15:                      qwen35.context_length u32              = 262144
+0.00.291.135 I llama_model_loader: - kv  16:                    qwen35.embedding_length u32              = 4096
+0.00.291.137 I llama_model_loader: - kv  17:                 qwen35.feed_forward_length u32              = 12288
+0.00.291.137 I llama_model_loader: - kv  18:                qwen35.attention.head_count u32              = 16
+0.00.291.138 I llama_model_loader: - kv  19:             qwen35.attention.head_count_kv u32              = 4
+0.00.291.140 I llama_model_loader: - kv  20:             qwen35.rope.dimension_sections arr[i32,4]       = [11, 11, 10, 0]
+0.00.291.142 I llama_model_loader: - kv  21:                      qwen35.rope.freq_base f32              = 10000000.000000
+0.00.291.143 I llama_model_loader: - kv  22:    qwen35.attention.layer_norm_rms_epsilon f32              = 0.000001
+0.00.291.143 I llama_model_loader: - kv  23:                qwen35.attention.key_length u32              = 256
+0.00.291.144 I llama_model_loader: - kv  24:              qwen35.attention.value_length u32              = 256
+0.00.291.144 I llama_model_loader: - kv  25:                     qwen35.ssm.conv_kernel u32              = 4
+0.00.291.146 I llama_model_loader: - kv  26:                      qwen35.ssm.state_size u32              = 128
+0.00.291.146 I llama_model_loader: - kv  27:                     qwen35.ssm.group_count u32              = 16
+0.00.291.146 I llama_model_loader: - kv  28:                  qwen35.ssm.time_step_rank u32              = 32
+0.00.291.146 I llama_model_loader: - kv  29:                      qwen35.ssm.inner_size u32              = 4096
+0.00.291.147 I llama_model_loader: - kv  30:             qwen35.full_attention_interval u32              = 4
+0.00.291.147 I llama_model_loader: - kv  31:                qwen35.rope.dimension_count u32              = 64
+0.00.291.147 I llama_model_loader: - kv  32:                       tokenizer.ggml.model str              = gpt2
+0.00.291.147 I llama_model_loader: - kv  33:                         tokenizer.ggml.pre str              = qwen35
+0.00.312.156 I llama_model_loader: - kv  34:                      tokenizer.ggml.tokens arr[str,248320]  = ["!", "\"", "#", "$", "%", "&", "'", ...
+0.00.316.707 I llama_model_loader: - kv  35:                  tokenizer.ggml.token_type arr[i32,248320]  = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ...
+0.00.338.179 I llama_model_loader: - kv  36:                      tokenizer.ggml.merges arr[str,247587]  = ["Ġ Ġ", "ĠĠ ĠĠ", "i n", "Ġ t",...
+0.00.338.182 I llama_model_loader: - kv  37:                tokenizer.ggml.eos_token_id u32              = 248046
+0.00.338.182 I llama_model_loader: - kv  38:            tokenizer.ggml.padding_token_id u32              = 248055
+0.00.338.185 I llama_model_loader: - kv  39:                    tokenizer.chat_template str              = {%- set image_count = namespace(value...
+0.00.338.185 I llama_model_loader: - kv  40:               general.quantization_version u32              = 2
+0.00.338.186 I llama_model_loader: - kv  41:                          general.file_type u32              = 15
+0.00.338.186 I llama_model_loader: - kv  42:                      quantize.imatrix.file str              = Qwen3.5-9B-GGUF/imatrix_unsloth.gguf
+0.00.338.189 I llama_model_loader: - kv  43:                   quantize.imatrix.dataset str              = unsloth_calibration_Qwen3.5-9B.txt
+0.00.338.189 I llama_model_loader: - kv  44:             quantize.imatrix.entries_count u32              = 248
+0.00.338.189 I llama_model_loader: - kv  45:              quantize.imatrix.chunks_count u32              = 80
+0.00.338.190 I llama_model_loader: - type  f32:  177 tensors
+0.00.338.190 I llama_model_loader: - type q8_0:   48 tensors
+0.00.338.191 I llama_model_loader: - type q4_K:  132 tensors
+0.00.338.191 I llama_model_loader: - type q5_K:   48 tensors
+0.00.338.191 I llama_model_loader: - type q6_K:   22 tensors
+0.00.338.192 I print_info: file format = GGUF V3 (latest)
+0.00.338.192 I print_info: file type   = Q4_K - Medium
+0.00.338.193 I print_info: file size   = 5.28 GiB (5.07 BPW) 
+0.00.338.200 I llama_prepare_model_devices: using device MTL0 (Apple M5) (unknown id) - 25558 MiB free
+0.00.384.530 D init_tokenizer: initializing tokenizer for type 2
+0.00.390.941 I load: 0 unused tokens
+0.00.390.950 D load: control token: 248076 '<|audio_pad|>' is not marked as EOG
+0.00.390.950 D load: control token: 248075 '<tts_text_bos_single>' is not marked as EOG
+0.00.390.951 D load: control token: 248074 '<tts_text_eod>' is not marked as EOG
+0.00.390.951 D load: control token: 248073 '<tts_text_bos>' is not marked as EOG
+0.00.390.951 D load: control token: 248072 '<tts_pad>' is not marked as EOG
+0.00.390.952 D load: control token: 248062 '<|fim_suffix|>' is not marked as EOG
+0.00.390.952 D load: control token: 248061 '<|fim_middle|>' is not marked as EOG
+0.00.390.952 D load: control token: 248060 '<|fim_prefix|>' is not marked as EOG
+0.00.390.952 D load: control token: 248056 '<|image_pad|>' is not marked as EOG
+0.00.390.952 D load: control token: 248055 '<|vision_pad|>' is not marked as EOG
+0.00.390.952 D load: control token: 248054 '<|vision_end|>' is not marked as EOG
+0.00.390.953 D load: control token: 248052 '<|quad_end|>' is not marked as EOG
+0.00.390.953 D load: control token: 248050 '<|box_end|>' is not marked as EOG
+0.00.390.953 D load: control token: 248049 '<|box_start|>' is not marked as EOG
+0.00.390.953 D load: control token: 248048 '<|object_ref_end|>' is not marked as EOG
+0.00.390.954 D load: control token: 248047 '<|object_ref_start|>' is not marked as EOG
+0.00.390.954 D load: control token: 248045 '<|im_start|>' is not marked as EOG
+0.00.393.612 D load: control token: 248071 '<|audio_end|>' is not marked as EOG
+0.00.397.912 D load: control token: 248051 '<|quad_start|>' is not marked as EOG
+0.00.399.716 D load: control token: 248070 '<|audio_start|>' is not marked as EOG
+0.00.400.088 D load: control token: 248053 '<|vision_start|>' is not marked as EOG
+0.00.400.617 D load: control token: 248057 '<|video_pad|>' is not marked as EOG
+0.00.404.221 I load: printing all EOG tokens:
+0.00.404.223 I load:   - 248044 ('<|endoftext|>')
+0.00.404.223 I load:   - 248046 ('<|im_end|>')
+0.00.404.223 I load:   - 248063 ('<|fim_pad|>')
+0.00.404.223 I load:   - 248064 ('<|repo_name|>')
+0.00.404.224 I load:   - 248065 ('<|file_sep|>')
+0.00.404.440 I load: special tokens cache size = 33
+0.00.443.428 I load: token to piece cache size = 1.7581 MB
+0.00.443.436 I print_info: arch                  = qwen35
+0.00.443.437 I print_info: vocab_only            = 0
+0.00.443.440 I print_info: no_alloc              = 0
+0.00.443.440 I print_info: n_ctx_train           = 262144
+0.00.443.440 I print_info: n_embd                = 4096
+0.00.443.440 I print_info: n_embd_inp            = 4096
+0.00.443.440 I print_info: n_layer               = 32
+0.00.443.443 I print_info: n_head                = 16
+0.00.443.444 I print_info: n_head_kv             = 4
+0.00.443.444 I print_info: n_rot                 = 64
+0.00.443.444 I print_info: n_swa                 = 0
+0.00.443.444 I print_info: is_swa_any            = 0
+0.00.443.445 I print_info: n_embd_head_k         = 256
+0.00.443.445 I print_info: n_embd_head_v         = 256
+0.00.443.445 I print_info: n_gqa                 = 4
+0.00.443.446 I print_info: n_embd_k_gqa          = 1024
+0.00.443.447 I print_info: n_embd_v_gqa          = 1024
+0.00.443.447 I print_info: f_norm_eps            = 0.0e+00
+0.00.443.447 I print_info: f_norm_rms_eps        = 1.0e-06
+0.00.443.447 I print_info: f_clamp_kqv           = 0.0e+00
+0.00.443.448 I print_info: f_max_alibi_bias      = 0.0e+00
+0.00.443.448 I print_info: f_logit_scale         = 0.0e+00
+0.00.443.448 I print_info: f_attn_scale          = 0.0e+00
+0.00.443.448 I print_info: f_attn_value_scale    = 0.0000
+0.00.443.449 I print_info: n_ff                  = 12288
+0.00.443.449 I print_info: n_expert              = 0
+0.00.443.449 I print_info: n_expert_used         = 0
+0.00.443.449 I print_info: n_expert_groups       = 0
+0.00.443.449 I print_info: n_group_used          = 0
+0.00.443.449 I print_info: causal attn           = 1
+0.00.443.449 I print_info: pooling type          = -1
+0.00.443.451 I print_info: rope type             = 40
+0.00.443.451 I print_info: rope scaling          = linear
+0.00.443.451 I print_info: freq_base_train       = 10000000.0
+0.00.443.452 I print_info: freq_scale_train      = 1
+0.00.443.452 I print_info: n_ctx_orig_yarn       = 262144
+0.00.443.452 I print_info: rope_yarn_log_mul     = 0.0000
+0.00.443.452 I print_info: rope_finetuned        = unknown
+0.00.443.452 I print_info: mrope sections        = [11, 11, 10, 0]
+0.00.443.453 I print_info: ssm_d_conv            = 4
+0.00.443.453 I print_info: ssm_d_inner           = 4096
+0.00.443.453 I print_info: ssm_d_state           = 128
+0.00.443.453 I print_info: ssm_dt_rank           = 32
+0.00.443.453 I print_info: ssm_n_group           = 16
+0.00.443.453 I print_info: ssm_dt_b_c_rms        = 0
+0.00.443.454 I print_info: model type            = 9B
+0.00.443.454 I print_info: model params          = 8.95 B
+0.00.443.454 I print_info: general.name          = Qwen3.5-9B
+0.00.443.455 I print_info: vocab type            = BPE
+0.00.443.455 I print_info: n_vocab               = 248320
+0.00.443.455 I print_info: n_merges              = 247587
+0.00.443.457 I print_info: BOS token             = 11 ','
+0.00.443.457 I print_info: EOS token             = 248046 '<|im_end|>'
+0.00.443.457 I print_info: EOT token             = 248046 '<|im_end|>'
+0.00.443.457 I print_info: PAD token             = 248055 '<|vision_pad|>'
+0.00.443.458 I print_info: LF token              = 198 'Ċ'
+0.00.443.458 I print_info: FIM PRE token         = 248060 '<|fim_prefix|>'
+0.00.443.458 I print_info: FIM SUF token         = 248062 '<|fim_suffix|>'
+0.00.443.458 I print_info: FIM MID token         = 248061 '<|fim_middle|>'
+0.00.443.458 I print_info: FIM PAD token         = 248063 '<|fim_pad|>'
+0.00.443.458 I print_info: FIM REP token         = 248064 '<|repo_name|>'
+0.00.443.459 I print_info: FIM SEP token         = 248065 '<|file_sep|>'
+0.00.443.459 I print_info: EOG token             = 248044 '<|endoftext|>'
+0.00.443.459 I print_info: EOG token             = 248046 '<|im_end|>'
+0.00.443.459 I print_info: EOG token             = 248063 '<|fim_pad|>'
+0.00.443.459 I print_info: EOG token             = 248064 '<|repo_name|>'
+0.00.443.460 I print_info: EOG token             = 248065 '<|file_sep|>'
+0.00.443.460 I print_info: max token length      = 256
+0.00.443.462 I load_tensors: loading model tensors, this can take a while... (mmap = true, direct_io = false)
+0.00.443.467 D load_tensors: layer   0 assigned to device MTL0, is_swa = 0
+0.00.443.471 D load_tensors: layer   1 assigned to device MTL0, is_swa = 0
+0.00.443.471 D load_tensors: layer   2 assigned to device MTL0, is_swa = 0
+0.00.443.471 D load_tensors: layer   3 assigned to device MTL0, is_swa = 0
+0.00.443.471 D load_tensors: layer   4 assigned to device MTL0, is_swa = 0
+0.00.443.471 D load_tensors: layer   5 assigned to device MTL0, is_swa = 0
+0.00.443.472 D load_tensors: layer   6 assigned to device MTL0, is_swa = 0
+0.00.443.472 D load_tensors: layer   7 assigned to device MTL0, is_swa = 0
+0.00.443.472 D load_tensors: layer   8 assigned to device MTL0, is_swa = 0
+0.00.443.472 D load_tensors: layer   9 assigned to device MTL0, is_swa = 0
+0.00.443.472 D load_tensors: layer  10 assigned to device MTL0, is_swa = 0
+0.00.443.472 D load_tensors: layer  11 assigned to device MTL0, is_swa = 0
+0.00.443.472 D load_tensors: layer  12 assigned to device MTL0, is_swa = 0
+0.00.443.473 D load_tensors: layer  13 assigned to device MTL0, is_swa = 0
+0.00.443.473 D load_tensors: layer  14 assigned to device MTL0, is_swa = 0
+0.00.443.474 D load_tensors: layer  15 assigned to device MTL0, is_swa = 0
+0.00.443.475 D load_tensors: layer  16 assigned to device MTL0, is_swa = 0
+0.00.443.475 D load_tensors: layer  17 assigned to device MTL0, is_swa = 0
+0.00.443.475 D load_tensors: layer  18 assigned to device MTL0, is_swa = 0
+0.00.443.475 D load_tensors: layer  19 assigned to device MTL0, is_swa = 0
+0.00.443.475 D load_tensors: layer  20 assigned to device MTL0, is_swa = 0
+0.00.443.475 D load_tensors: layer  21 assigned to device MTL0, is_swa = 0
+0.00.443.475 D load_tensors: layer  22 assigned to device MTL0, is_swa = 0
+0.00.443.475 D load_tensors: layer  23 assigned to device MTL0, is_swa = 0
+0.00.443.476 D load_tensors: layer  24 assigned to device MTL0, is_swa = 0
+0.00.443.476 D load_tensors: layer  25 assigned to device MTL0, is_swa = 0
+0.00.443.476 D load_tensors: layer  26 assigned to device MTL0, is_swa = 0
+0.00.443.476 D load_tensors: layer  27 assigned to device MTL0, is_swa = 0
+0.00.443.476 D load_tensors: layer  28 assigned to device MTL0, is_swa = 0
+0.00.443.476 D load_tensors: layer  29 assigned to device MTL0, is_swa = 0
+0.00.443.476 D load_tensors: layer  30 assigned to device MTL0, is_swa = 0
+0.00.443.477 D load_tensors: layer  31 assigned to device MTL0, is_swa = 0
+0.00.443.477 D load_tensors: layer  32 assigned to device MTL0, is_swa = 0
+0.00.443.494 D create_tensor: loading tensor token_embd.weight
+0.00.443.503 D create_tensor: loading tensor output_norm.weight
+0.00.443.509 D create_tensor: loading tensor output.weight
+0.00.443.514 D create_tensor: loading tensor blk.0.attn_norm.weight
+0.00.443.520 D create_tensor: loading tensor blk.0.post_attention_norm.weight
+0.00.443.524 D create_tensor: loading tensor blk.0.attn_qkv.weight
+0.00.443.528 D create_tensor: loading tensor blk.0.attn_gate.weight
+0.00.443.539 D create_tensor: loading tensor blk.0.ssm_conv1d.weight
+0.00.443.543 D create_tensor: loading tensor blk.0.ssm_dt.bias
+0.00.443.548 D create_tensor: loading tensor blk.0.ssm_a
+0.00.443.553 D create_tensor: loading tensor blk.0.ssm_beta.weight
+0.00.443.557 D create_tensor: loading tensor blk.0.ssm_alpha.weight
+0.00.443.561 D create_tensor: loading tensor blk.0.ssm_norm.weight
+0.00.443.567 D create_tensor: loading tensor blk.0.ssm_out.weight
+0.00.443.572 D create_tensor: loading tensor blk.0.ffn_gate.weight
+0.00.443.576 D create_tensor: loading tensor blk.0.ffn_down.weight
+0.00.443.580 D create_tensor: loading tensor blk.0.ffn_up.weight
+0.00.443.588 D create_tensor: loading tensor blk.1.attn_norm.weight
+0.00.443.593 D create_tensor: loading tensor blk.1.post_attention_norm.weight
+0.00.443.597 D create_tensor: loading tensor blk.1.attn_qkv.weight
+0.00.443.601 D create_tensor: loading tensor blk.1.attn_gate.weight
+0.00.443.605 D create_tensor: loading tensor blk.1.ssm_conv1d.weight
+0.00.443.609 D create_tensor: loading tensor blk.1.ssm_dt.bias
+0.00.443.613 D create_tensor: loading tensor blk.1.ssm_a
+0.00.443.621 D create_tensor: loading tensor blk.1.ssm_beta.weight
+0.00.443.633 D create_tensor: loading tensor blk.1.ssm_alpha.weight
+0.00.443.638 D create_tensor: loading tensor blk.1.ssm_norm.weight
+0.00.443.643 D create_tensor: loading tensor blk.1.ssm_out.weight
+0.00.443.647 D create_tensor: loading tensor blk.1.ffn_gate.weight
+0.00.443.651 D create_tensor: loading tensor blk.1.ffn_down.weight
+0.00.443.656 D create_tensor: loading tensor blk.1.ffn_up.weight
+0.00.443.661 D create_tensor: loading tensor blk.2.attn_norm.weight
+0.00.443.666 D create_tensor: loading tensor blk.2.post_attention_norm.weight
+0.00.443.671 D create_tensor: loading tensor blk.2.attn_qkv.weight
+0.00.443.677 D create_tensor: loading tensor blk.2.attn_gate.weight
+0.00.443.682 D create_tensor: loading tensor blk.2.ssm_conv1d.weight
+0.00.443.686 D create_tensor: loading tensor blk.2.ssm_dt.bias
+0.00.443.690 D create_tensor: loading tensor blk.2.ssm_a
+0.00.443.694 D create_tensor: loading tensor blk.2.ssm_beta.weight
+0.00.443.698 D create_tensor: loading tensor blk.2.ssm_alpha.weight
+0.00.443.702 D create_tensor: loading tensor blk.2.ssm_norm.weight
+0.00.443.707 D create_tensor: loading tensor blk.2.ssm_out.weight
+0.00.443.716 D create_tensor: loading tensor blk.2.ffn_gate.weight
+0.00.443.723 D create_tensor: loading tensor blk.2.ffn_down.weight
+0.00.443.728 D create_tensor: loading tensor blk.2.ffn_up.weight
+0.00.443.733 D create_tensor: loading tensor blk.3.attn_norm.weight
+0.00.443.739 D create_tensor: loading tensor blk.3.post_attention_norm.weight
+0.00.443.745 D create_tensor: loading tensor blk.3.attn_q.weight
+0.00.443.750 D create_tensor: loading tensor blk.3.attn_k.weight
+0.00.443.755 D create_tensor: loading tensor blk.3.attn_v.weight
+0.00.443.763 D create_tensor: loading tensor blk.3.attn_output.weight
+0.00.443.768 D create_tensor: loading tensor blk.3.attn_q_norm.weight
+0.00.443.774 D create_tensor: loading tensor blk.3.attn_k_norm.weight
+0.00.443.777 D create_tensor: loading tensor blk.3.ffn_gate.weight
+0.00.443.782 D create_tensor: loading tensor blk.3.ffn_down.weight
+0.00.443.786 D create_tensor: loading tensor blk.3.ffn_up.weight
+0.00.443.789 D create_tensor: loading tensor blk.4.attn_norm.weight
+0.00.443.795 D create_tensor: loading tensor blk.4.post_attention_norm.weight
+0.00.443.798 D create_tensor: loading tensor blk.4.attn_qkv.weight
+0.00.443.803 D create_tensor: loading tensor blk.4.attn_gate.weight
+0.00.443.808 D create_tensor: loading tensor blk.4.ssm_conv1d.weight
+0.00.443.813 D create_tensor: loading tensor blk.4.ssm_dt.bias
+0.00.443.817 D create_tensor: loading tensor blk.4.ssm_a
+0.00.443.821 D create_tensor: loading tensor blk.4.ssm_beta.weight
+0.00.443.830 D create_tensor: loading tensor blk.4.ssm_alpha.weight
+0.00.443.834 D create_tensor: loading tensor blk.4.ssm_norm.weight
+0.00.443.838 D create_tensor: loading tensor blk.4.ssm_out.weight
+0.00.443.842 D create_tensor: loading tensor blk.4.ffn_gate.weight
+0.00.443.846 D create_tensor: loading tensor blk.4.ffn_down.weight
+0.00.443.850 D create_tensor: loading tensor blk.4.ffn_up.weight
+0.00.443.855 D create_tensor: loading tensor blk.5.attn_norm.weight
+0.00.443.858 D create_tensor: loading tensor blk.5.post_attention_norm.weight
+0.00.443.863 D create_tensor: loading tensor blk.5.attn_qkv.weight
+0.00.443.867 D create_tensor: loading tensor blk.5.attn_gate.weight
+0.00.443.873 D create_tensor: loading tensor blk.5.ssm_conv1d.weight
+0.00.443.878 D create_tensor: loading tensor blk.5.ssm_dt.bias
+0.00.443.882 D create_tensor: loading tensor blk.5.ssm_a
+0.00.443.886 D create_tensor: loading tensor blk.5.ssm_beta.weight
+0.00.443.889 D create_tensor: loading tensor blk.5.ssm_alpha.weight
+0.00.443.894 D create_tensor: loading tensor blk.5.ssm_norm.weight
+0.00.443.899 D create_tensor: loading tensor blk.5.ssm_out.weight
+0.00.443.903 D create_tensor: loading tensor blk.5.ffn_gate.weight
+0.00.443.907 D create_tensor: loading tensor blk.5.ffn_down.weight
+0.00.443.910 D create_tensor: loading tensor blk.5.ffn_up.weight
+0.00.443.915 D create_tensor: loading tensor blk.6.attn_norm.weight
+0.00.443.919 D create_tensor: loading tensor blk.6.post_attention_norm.weight
+0.00.443.924 D create_tensor: loading tensor blk.6.attn_qkv.weight
+0.00.443.930 D create_tensor: loading tensor blk.6.attn_gate.weight
+0.00.443.936 D create_tensor: loading tensor blk.6.ssm_conv1d.weight
+0.00.443.940 D create_tensor: loading tensor blk.6.ssm_dt.bias
+0.00.443.944 D create_tensor: loading tensor blk.6.ssm_a
+0.00.443.949 D create_tensor: loading tensor blk.6.ssm_beta.weight
+0.00.443.953 D create_tensor: loading tensor blk.6.ssm_alpha.weight
+0.00.443.958 D create_tensor: loading tensor blk.6.ssm_norm.weight
+0.00.443.963 D create_tensor: loading tensor blk.6.ssm_out.weight
+0.00.443.968 D create_tensor: loading tensor blk.6.ffn_gate.weight
+0.00.443.972 D create_tensor: loading tensor blk.6.ffn_down.weight
+0.00.443.976 D create_tensor: loading tensor blk.6.ffn_up.weight
+0.00.443.980 D create_tensor: loading tensor blk.7.attn_norm.weight
+0.00.443.984 D create_tensor: loading tensor blk.7.post_attention_norm.weight
+0.00.443.989 D create_tensor: loading tensor blk.7.attn_q.weight
+0.00.443.994 D create_tensor: loading tensor blk.7.attn_k.weight
+0.00.443.997 D create_tensor: loading tensor blk.7.attn_v.weight
+0.00.444.003 D create_tensor: loading tensor blk.7.attn_output.weight
+0.00.444.009 D create_tensor: loading tensor blk.7.attn_q_norm.weight
+0.00.444.014 D create_tensor: loading tensor blk.7.attn_k_norm.weight
+0.00.444.019 D create_tensor: loading tensor blk.7.ffn_gate.weight
+0.00.444.022 D create_tensor: loading tensor blk.7.ffn_down.weight
+0.00.444.031 D create_tensor: loading tensor blk.7.ffn_up.weight
+0.00.444.036 D create_tensor: loading tensor blk.8.attn_norm.weight
+0.00.444.040 D create_tensor: loading tensor blk.8.post_attention_norm.weight
+0.00.444.045 D create_tensor: loading tensor blk.8.attn_qkv.weight
+0.00.444.049 D create_tensor: loading tensor blk.8.attn_gate.weight
+0.00.444.054 D create_tensor: loading tensor blk.8.ssm_conv1d.weight
+0.00.444.058 D create_tensor: loading tensor blk.8.ssm_dt.bias
+0.00.444.062 D create_tensor: loading tensor blk.8.ssm_a
+0.00.444.066 D create_tensor: loading tensor blk.8.ssm_beta.weight
+0.00.444.070 D create_tensor: loading tensor blk.8.ssm_alpha.weight
+0.00.444.074 D create_tensor: loading tensor blk.8.ssm_norm.weight
+0.00.444.078 D create_tensor: loading tensor blk.8.ssm_out.weight
+0.00.444.082 D create_tensor: loading tensor blk.8.ffn_gate.weight
+0.00.444.086 D create_tensor: loading tensor blk.8.ffn_down.weight
+0.00.444.090 D create_tensor: loading tensor blk.8.ffn_up.weight
+0.00.444.095 D create_tensor: loading tensor blk.9.attn_norm.weight
+0.00.444.100 D create_tensor: loading tensor blk.9.post_attention_norm.weight
+0.00.444.105 D create_tensor: loading tensor blk.9.attn_qkv.weight
+0.00.444.113 D create_tensor: loading tensor blk.9.attn_gate.weight
+0.00.444.120 D create_tensor: loading tensor blk.9.ssm_conv1d.weight
+0.00.444.126 D create_tensor: loading tensor blk.9.ssm_dt.bias
+0.00.444.130 D create_tensor: loading tensor blk.9.ssm_a
+0.00.444.135 D create_tensor: loading tensor blk.9.ssm_beta.weight
+0.00.444.139 D create_tensor: loading tensor blk.9.ssm_alpha.weight
+0.00.444.143 D create_tensor: loading tensor blk.9.ssm_norm.weight
+0.00.444.147 D create_tensor: loading tensor blk.9.ssm_out.weight
+0.00.444.152 D create_tensor: loading tensor blk.9.ffn_gate.weight
+0.00.444.157 D create_tensor: loading tensor blk.9.ffn_down.weight
+0.00.444.161 D create_tensor: loading tensor blk.9.ffn_up.weight
+0.00.444.166 D create_tensor: loading tensor blk.10.attn_norm.weight
+0.00.444.171 D create_tensor: loading tensor blk.10.post_attention_norm.weight
+0.00.444.176 D create_tensor: loading tensor blk.10.attn_qkv.weight
+0.00.444.180 D create_tensor: loading tensor blk.10.attn_gate.weight
+0.00.444.188 D create_tensor: loading tensor blk.10.ssm_conv1d.weight
+0.00.444.193 D create_tensor: loading tensor blk.10.ssm_dt.bias
+0.00.444.197 D create_tensor: loading tensor blk.10.ssm_a
+0.00.444.202 D create_tensor: loading tensor blk.10.ssm_beta.weight
+0.00.444.206 D create_tensor: loading tensor blk.10.ssm_alpha.weight
+0.00.444.211 D create_tensor: loading tensor blk.10.ssm_norm.weight
+0.00.444.214 D create_tensor: loading tensor blk.10.ssm_out.weight
+0.00.444.219 D create_tensor: loading tensor blk.10.ffn_gate.weight
+0.00.444.224 D create_tensor: loading tensor blk.10.ffn_down.weight
+0.00.444.227 D create_tensor: loading tensor blk.10.ffn_up.weight
+0.00.444.232 D create_tensor: loading tensor blk.11.attn_norm.weight
+0.00.444.237 D create_tensor: loading tensor blk.11.post_attention_norm.weight
+0.00.444.243 D create_tensor: loading tensor blk.11.attn_q.weight
+0.00.444.247 D create_tensor: loading tensor blk.11.attn_k.weight
+0.00.444.251 D create_tensor: loading tensor blk.11.attn_v.weight
+0.00.444.259 D create_tensor: loading tensor blk.11.attn_output.weight
+0.00.444.264 D create_tensor: loading tensor blk.11.attn_q_norm.weight
+0.00.444.268 D create_tensor: loading tensor blk.11.attn_k_norm.weight
+0.00.444.277 D create_tensor: loading tensor blk.11.ffn_gate.weight
+0.00.444.281 D create_tensor: loading tensor blk.11.ffn_down.weight
+0.00.444.286 D create_tensor: loading tensor blk.11.ffn_up.weight
+0.00.444.290 D create_tensor: loading tensor blk.12.attn_norm.weight
+0.00.444.295 D create_tensor: loading tensor blk.12.post_attention_norm.weight
+0.00.444.299 D create_tensor: loading tensor blk.12.attn_qkv.weight
+0.00.444.304 D create_tensor: loading tensor blk.12.attn_gate.weight
+0.00.444.308 D create_tensor: loading tensor blk.12.ssm_conv1d.weight
+0.00.444.313 D create_tensor: loading tensor blk.12.ssm_dt.bias
+0.00.444.318 D create_tensor: loading tensor blk.12.ssm_a
+0.00.444.323 D create_tensor: loading tensor blk.12.ssm_beta.weight
+0.00.444.328 D create_tensor: loading tensor blk.12.ssm_alpha.weight
+0.00.444.332 D create_tensor: loading tensor blk.12.ssm_norm.weight
+0.00.444.337 D create_tensor: loading tensor blk.12.ssm_out.weight
+0.00.444.341 D create_tensor: loading tensor blk.12.ffn_gate.weight
+0.00.444.345 D create_tensor: loading tensor blk.12.ffn_down.weight
+0.00.444.350 D create_tensor: loading tensor blk.12.ffn_up.weight
+0.00.444.354 D create_tensor: loading tensor blk.13.attn_norm.weight
+0.00.444.358 D create_tensor: loading tensor blk.13.post_attention_norm.weight
+0.00.444.363 D create_tensor: loading tensor blk.13.attn_qkv.weight
+0.00.444.366 D create_tensor: loading tensor blk.13.attn_gate.weight
+0.00.444.372 D create_tensor: loading tensor blk.13.ssm_conv1d.weight
+0.00.444.377 D create_tensor: loading tensor blk.13.ssm_dt.bias
+0.00.444.381 D create_tensor: loading tensor blk.13.ssm_a
+0.00.444.386 D create_tensor: loading tensor blk.13.ssm_beta.weight
+0.00.444.390 D create_tensor: loading tensor blk.13.ssm_alpha.weight
+0.00.444.394 D create_tensor: loading tensor blk.13.ssm_norm.weight
+0.00.444.399 D create_tensor: loading tensor blk.13.ssm_out.weight
+0.00.444.404 D create_tensor: loading tensor blk.13.ffn_gate.weight
+0.00.444.407 D create_tensor: loading tensor blk.13.ffn_down.weight
+0.00.444.415 D create_tensor: loading tensor blk.13.ffn_up.weight
+0.00.444.420 D create_tensor: loading tensor blk.14.attn_norm.weight
+0.00.444.427 D create_tensor: loading tensor blk.14.post_attention_norm.weight
+0.00.444.431 D create_tensor: loading tensor blk.14.attn_qkv.weight
+0.00.444.436 D create_tensor: loading tensor blk.14.attn_gate.weight
+0.00.444.441 D create_tensor: loading tensor blk.14.ssm_conv1d.weight
+0.00.444.445 D create_tensor: loading tensor blk.14.ssm_dt.bias
+0.00.444.449 D create_tensor: loading tensor blk.14.ssm_a
+0.00.444.453 D create_tensor: loading tensor blk.14.ssm_beta.weight
+0.00.444.457 D create_tensor: loading tensor blk.14.ssm_alpha.weight
+0.00.444.461 D create_tensor: loading tensor blk.14.ssm_norm.weight
+0.00.444.466 D create_tensor: loading tensor blk.14.ssm_out.weight
+0.00.444.471 D create_tensor: loading tensor blk.14.ffn_gate.weight
+0.00.444.478 D create_tensor: loading tensor blk.14.ffn_down.weight
+0.00.444.482 D create_tensor: loading tensor blk.14.ffn_up.weight
+0.00.444.486 D create_tensor: loading tensor blk.15.attn_norm.weight
+0.00.444.496 D create_tensor: loading tensor blk.15.post_attention_norm.weight
+0.00.444.505 D create_tensor: loading tensor blk.15.attn_q.weight
+0.00.444.511 D create_tensor: loading tensor blk.15.attn_k.weight
+0.00.444.514 D create_tensor: loading tensor blk.15.attn_v.weight
+0.00.444.527 D create_tensor: loading tensor blk.15.attn_output.weight
+0.00.444.532 D create_tensor: loading tensor blk.15.attn_q_norm.weight
+0.00.444.537 D create_tensor: loading tensor blk.15.attn_k_norm.weight
+0.00.444.542 D create_tensor: loading tensor blk.15.ffn_gate.weight
+0.00.444.546 D create_tensor: loading tensor blk.15.ffn_down.weight
+0.00.444.554 D create_tensor: loading tensor blk.15.ffn_up.weight
+0.00.444.558 D create_tensor: loading tensor blk.16.attn_norm.weight
+0.00.444.563 D create_tensor: loading tensor blk.16.post_attention_norm.weight
+0.00.444.568 D create_tensor: loading tensor blk.16.attn_qkv.weight
+0.00.444.573 D create_tensor: loading tensor blk.16.attn_gate.weight
+0.00.444.578 D create_tensor: loading tensor blk.16.ssm_conv1d.weight
+0.00.444.582 D create_tensor: loading tensor blk.16.ssm_dt.bias
+0.00.444.587 D create_tensor: loading tensor blk.16.ssm_a
+0.00.444.591 D create_tensor: loading tensor blk.16.ssm_beta.weight
+0.00.444.596 D create_tensor: loading tensor blk.16.ssm_alpha.weight
+0.00.444.601 D create_tensor: loading tensor blk.16.ssm_norm.weight
+0.00.444.606 D create_tensor: loading tensor blk.16.ssm_out.weight
+0.00.444.610 D create_tensor: loading tensor blk.16.ffn_gate.weight
+0.00.444.614 D create_tensor: loading tensor blk.16.ffn_down.weight
+0.00.444.619 D create_tensor: loading tensor blk.16.ffn_up.weight
+0.00.444.624 D create_tensor: loading tensor blk.17.attn_norm.weight
+0.00.444.628 D create_tensor: loading tensor blk.17.post_attention_norm.weight
+0.00.444.632 D create_tensor: loading tensor blk.17.attn_qkv.weight
+0.00.444.636 D create_tensor: loading tensor blk.17.attn_gate.weight
+0.00.444.641 D create_tensor: loading tensor blk.17.ssm_conv1d.weight
+0.00.444.645 D create_tensor: loading tensor blk.17.ssm_dt.bias
+0.00.444.649 D create_tensor: loading tensor blk.17.ssm_a
+0.00.444.656 D create_tensor: loading tensor blk.17.ssm_beta.weight
+0.00.444.661 D create_tensor: loading tensor blk.17.ssm_alpha.weight
+0.00.444.665 D create_tensor: loading tensor blk.17.ssm_norm.weight
+0.00.444.670 D create_tensor: loading tensor blk.17.ssm_out.weight
+0.00.444.677 D create_tensor: loading tensor blk.17.ffn_gate.weight
+0.00.444.682 D create_tensor: loading tensor blk.17.ffn_down.weight
+0.00.444.693 D create_tensor: loading tensor blk.17.ffn_up.weight
+0.00.444.697 D create_tensor: loading tensor blk.18.attn_norm.weight
+0.00.444.702 D create_tensor: loading tensor blk.18.post_attention_norm.weight
+0.00.444.706 D create_tensor: loading tensor blk.18.attn_qkv.weight
+0.00.444.710 D create_tensor: loading tensor blk.18.attn_gate.weight
+0.00.444.715 D create_tensor: loading tensor blk.18.ssm_conv1d.weight
+0.00.444.721 D create_tensor: loading tensor blk.18.ssm_dt.bias
+0.00.444.726 D create_tensor: loading tensor blk.18.ssm_a
+0.00.444.730 D create_tensor: loading tensor blk.18.ssm_beta.weight
+0.00.444.735 D create_tensor: loading tensor blk.18.ssm_alpha.weight
+0.00.444.739 D create_tensor: loading tensor blk.18.ssm_norm.weight
+0.00.444.743 D create_tensor: loading tensor blk.18.ssm_out.weight
+0.00.444.747 D create_tensor: loading tensor blk.18.ffn_gate.weight
+0.00.444.752 D create_tensor: loading tensor blk.18.ffn_down.weight
+0.00.444.756 D create_tensor: loading tensor blk.18.ffn_up.weight
+0.00.444.761 D create_tensor: loading tensor blk.19.attn_norm.weight
+0.00.444.765 D create_tensor: loading tensor blk.19.post_attention_norm.weight
+0.00.444.771 D create_tensor: loading tensor blk.19.attn_q.weight
+0.00.444.776 D create_tensor: loading tensor blk.19.attn_k.weight
+0.00.444.780 D create_tensor: loading tensor blk.19.attn_v.weight
+0.00.444.787 D create_tensor: loading tensor blk.19.attn_output.weight
+0.00.444.791 D create_tensor: loading tensor blk.19.attn_q_norm.weight
+0.00.444.795 D create_tensor: loading tensor blk.19.attn_k_norm.weight
+0.00.444.799 D create_tensor: loading tensor blk.19.ffn_gate.weight
+0.00.444.803 D create_tensor: loading tensor blk.19.ffn_down.weight
+0.00.444.807 D create_tensor: loading tensor blk.19.ffn_up.weight
+0.00.444.812 D create_tensor: loading tensor blk.20.attn_norm.weight
+0.00.444.820 D create_tensor: loading tensor blk.20.post_attention_norm.weight
+0.00.444.825 D create_tensor: loading tensor blk.20.attn_qkv.weight
+0.00.444.830 D create_tensor: loading tensor blk.20.attn_gate.weight
+0.00.444.836 D create_tensor: loading tensor blk.20.ssm_conv1d.weight
+0.00.444.840 D create_tensor: loading tensor blk.20.ssm_dt.bias
+0.00.444.845 D create_tensor: loading tensor blk.20.ssm_a
+0.00.444.849 D create_tensor: loading tensor blk.20.ssm_beta.weight
+0.00.444.853 D create_tensor: loading tensor blk.20.ssm_alpha.weight
+0.00.444.858 D create_tensor: loading tensor blk.20.ssm_norm.weight
+0.00.444.862 D create_tensor: loading tensor blk.20.ssm_out.weight
+0.00.444.867 D create_tensor: loading tensor blk.20.ffn_gate.weight
+0.00.444.870 D create_tensor: loading tensor blk.20.ffn_down.weight
+0.00.444.874 D create_tensor: loading tensor blk.20.ffn_up.weight
+0.00.444.878 D create_tensor: loading tensor blk.21.attn_norm.weight
+0.00.444.883 D create_tensor: loading tensor blk.21.post_attention_norm.weight
+0.00.444.888 D create_tensor: loading tensor blk.21.attn_qkv.weight
+0.00.444.893 D create_tensor: loading tensor blk.21.attn_gate.weight
+0.00.444.898 D create_tensor: loading tensor blk.21.ssm_conv1d.weight
+0.00.444.902 D create_tensor: loading tensor blk.21.ssm_dt.bias
+0.00.444.907 D create_tensor: loading tensor blk.21.ssm_a
+0.00.444.911 D create_tensor: loading tensor blk.21.ssm_beta.weight
+0.00.444.914 D create_tensor: loading tensor blk.21.ssm_alpha.weight
+0.00.444.919 D create_tensor: loading tensor blk.21.ssm_norm.weight
+0.00.444.924 D create_tensor: loading tensor blk.21.ssm_out.weight
+0.00.444.928 D create_tensor: loading tensor blk.21.ffn_gate.weight
+0.00.444.933 D create_tensor: loading tensor blk.21.ffn_down.weight
+0.00.444.937 D create_tensor: loading tensor blk.21.ffn_up.weight
+0.00.444.942 D create_tensor: loading tensor blk.22.attn_norm.weight
+0.00.444.947 D create_tensor: loading tensor blk.22.post_attention_norm.weight
+0.00.444.951 D create_tensor: loading tensor blk.22.attn_qkv.weight
+0.00.444.955 D create_tensor: loading tensor blk.22.attn_gate.weight
+0.00.444.961 D create_tensor: loading tensor blk.22.ssm_conv1d.weight
+0.00.444.965 D create_tensor: loading tensor blk.22.ssm_dt.bias
+0.00.444.969 D create_tensor: loading tensor blk.22.ssm_a
+0.00.444.973 D create_tensor: loading tensor blk.22.ssm_beta.weight
+0.00.444.977 D create_tensor: loading tensor blk.22.ssm_alpha.weight
+0.00.444.987 D create_tensor: loading tensor blk.22.ssm_norm.weight
+0.00.444.994 D create_tensor: loading tensor blk.22.ssm_out.weight
+0.00.444.999 D create_tensor: loading tensor blk.22.ffn_gate.weight
+0.00.445.003 D create_tensor: loading tensor blk.22.ffn_down.weight
+0.00.445.008 D create_tensor: loading tensor blk.22.ffn_up.weight
+0.00.445.012 D create_tensor: loading tensor blk.23.attn_norm.weight
+0.00.445.021 D create_tensor: loading tensor blk.23.post_attention_norm.weight
+0.00.445.027 D create_tensor: loading tensor blk.23.attn_q.weight
+0.00.445.032 D create_tensor: loading tensor blk.23.attn_k.weight
+0.00.445.037 D create_tensor: loading tensor blk.23.attn_v.weight
+0.00.445.045 D create_tensor: loading tensor blk.23.attn_output.weight
+0.00.445.050 D create_tensor: loading tensor blk.23.attn_q_norm.weight
+0.00.445.060 D create_tensor: loading tensor blk.23.attn_k_norm.weight
+0.00.445.066 D create_tensor: loading tensor blk.23.ffn_gate.weight
+0.00.445.070 D create_tensor: loading tensor blk.23.ffn_down.weight
+0.00.445.075 D create_tensor: loading tensor blk.23.ffn_up.weight
+0.00.445.079 D create_tensor: loading tensor blk.24.attn_norm.weight
+0.00.445.084 D create_tensor: loading tensor blk.24.post_attention_norm.weight
+0.00.445.089 D create_tensor: loading tensor blk.24.attn_qkv.weight
+0.00.445.094 D create_tensor: loading tensor blk.24.attn_gate.weight
+0.00.445.099 D create_tensor: loading tensor blk.24.ssm_conv1d.weight
+0.00.445.104 D create_tensor: loading tensor blk.24.ssm_dt.bias
+0.00.445.109 D create_tensor: loading tensor blk.24.ssm_a
+0.00.445.113 D create_tensor: loading tensor blk.24.ssm_beta.weight
+0.00.445.118 D create_tensor: loading tensor blk.24.ssm_alpha.weight
+0.00.445.122 D create_tensor: loading tensor blk.24.ssm_norm.weight
+0.00.445.125 D create_tensor: loading tensor blk.24.ssm_out.weight
+0.00.445.130 D create_tensor: loading tensor blk.24.ffn_gate.weight
+0.00.445.133 D create_tensor: loading tensor blk.24.ffn_down.weight
+0.00.445.138 D create_tensor: loading tensor blk.24.ffn_up.weight
+0.00.445.142 D create_tensor: loading tensor blk.25.attn_norm.weight
+0.00.445.147 D create_tensor: loading tensor blk.25.post_attention_norm.weight
+0.00.445.151 D create_tensor: loading tensor blk.25.attn_qkv.weight
+0.00.445.156 D create_tensor: loading tensor blk.25.attn_gate.weight
+0.00.445.161 D create_tensor: loading tensor blk.25.ssm_conv1d.weight
+0.00.445.166 D create_tensor: loading tensor blk.25.ssm_dt.bias
+0.00.445.170 D create_tensor: loading tensor blk.25.ssm_a
+0.00.445.174 D create_tensor: loading tensor blk.25.ssm_beta.weight
+0.00.445.178 D create_tensor: loading tensor blk.25.ssm_alpha.weight
+0.00.445.183 D create_tensor: loading tensor blk.25.ssm_norm.weight
+0.00.445.187 D create_tensor: loading tensor blk.25.ssm_out.weight
+0.00.445.196 D create_tensor: loading tensor blk.25.ffn_gate.weight
+0.00.445.200 D create_tensor: loading tensor blk.25.ffn_down.weight
+0.00.445.205 D create_tensor: loading tensor blk.25.ffn_up.weight
+0.00.445.209 D create_tensor: loading tensor blk.26.attn_norm.weight
+0.00.445.214 D create_tensor: loading tensor blk.26.post_attention_norm.weight
+0.00.445.219 D create_tensor: loading tensor blk.26.attn_qkv.weight
+0.00.445.224 D create_tensor: loading tensor blk.26.attn_gate.weight
+0.00.445.228 D create_tensor: loading tensor blk.26.ssm_conv1d.weight
+0.00.445.233 D create_tensor: loading tensor blk.26.ssm_dt.bias
+0.00.445.237 D create_tensor: loading tensor blk.26.ssm_a
+0.00.445.241 D create_tensor: loading tensor blk.26.ssm_beta.weight
+0.00.445.247 D create_tensor: loading tensor blk.26.ssm_alpha.weight
+0.00.445.251 D create_tensor: loading tensor blk.26.ssm_norm.weight
+0.00.445.255 D create_tensor: loading tensor blk.26.ssm_out.weight
+0.00.445.261 D create_tensor: loading tensor blk.26.ffn_gate.weight
+0.00.445.264 D create_tensor: loading tensor blk.26.ffn_down.weight
+0.00.445.269 D create_tensor: loading tensor blk.26.ffn_up.weight
+0.00.445.273 D create_tensor: loading tensor blk.27.attn_norm.weight
+0.00.445.278 D create_tensor: loading tensor blk.27.post_attention_norm.weight
+0.00.445.283 D create_tensor: loading tensor blk.27.attn_q.weight
+0.00.445.288 D create_tensor: loading tensor blk.27.attn_k.weight
+0.00.445.293 D create_tensor: loading tensor blk.27.attn_v.weight
+0.00.445.299 D create_tensor: loading tensor blk.27.attn_output.weight
+0.00.445.304 D create_tensor: loading tensor blk.27.attn_q_norm.weight
+0.00.445.308 D create_tensor: loading tensor blk.27.attn_k_norm.weight
+0.00.445.313 D create_tensor: loading tensor blk.27.ffn_gate.weight
+0.00.445.316 D create_tensor: loading tensor blk.27.ffn_down.weight
+0.00.445.320 D create_tensor: loading tensor blk.27.ffn_up.weight
+0.00.445.325 D create_tensor: loading tensor blk.28.attn_norm.weight
+0.00.445.330 D create_tensor: loading tensor blk.28.post_attention_norm.weight
+0.00.445.334 D create_tensor: loading tensor blk.28.attn_qkv.weight
+0.00.445.339 D create_tensor: loading tensor blk.28.attn_gate.weight
+0.00.445.344 D create_tensor: loading tensor blk.28.ssm_conv1d.weight
+0.00.445.349 D create_tensor: loading tensor blk.28.ssm_dt.bias
+0.00.445.354 D create_tensor: loading tensor blk.28.ssm_a
+0.00.445.358 D create_tensor: loading tensor blk.28.ssm_beta.weight
+0.00.445.363 D create_tensor: loading tensor blk.28.ssm_alpha.weight
+0.00.445.368 D create_tensor: loading tensor blk.28.ssm_norm.weight
+0.00.445.373 D create_tensor: loading tensor blk.28.ssm_out.weight
+0.00.445.377 D create_tensor: loading tensor blk.28.ffn_gate.weight
+0.00.445.381 D create_tensor: loading tensor blk.28.ffn_down.weight
+0.00.445.386 D create_tensor: loading tensor blk.28.ffn_up.weight
+0.00.445.390 D create_tensor: loading tensor blk.29.attn_norm.weight
+0.00.445.395 D create_tensor: loading tensor blk.29.post_attention_norm.weight
+0.00.445.399 D create_tensor: loading tensor blk.29.attn_qkv.weight
+0.00.445.404 D create_tensor: loading tensor blk.29.attn_gate.weight
+0.00.445.409 D create_tensor: loading tensor blk.29.ssm_conv1d.weight
+0.00.445.415 D create_tensor: loading tensor blk.29.ssm_dt.bias
+0.00.445.420 D create_tensor: loading tensor blk.29.ssm_a
+0.00.445.425 D create_tensor: loading tensor blk.29.ssm_beta.weight
+0.00.445.430 D create_tensor: loading tensor blk.29.ssm_alpha.weight
+0.00.445.434 D create_tensor: loading tensor blk.29.ssm_norm.weight
+0.00.445.439 D create_tensor: loading tensor blk.29.ssm_out.weight
+0.00.445.444 D create_tensor: loading tensor blk.29.ffn_gate.weight
+0.00.445.449 D create_tensor: loading tensor blk.29.ffn_down.weight
+0.00.445.456 D create_tensor: loading tensor blk.29.ffn_up.weight
+0.00.445.461 D create_tensor: loading tensor blk.30.attn_norm.weight
+0.00.445.468 D create_tensor: loading tensor blk.30.post_attention_norm.weight
+0.00.445.473 D create_tensor: loading tensor blk.30.attn_qkv.weight
+0.00.445.479 D create_tensor: loading tensor blk.30.attn_gate.weight
+0.00.445.483 D create_tensor: loading tensor blk.30.ssm_conv1d.weight
+0.00.445.488 D create_tensor: loading tensor blk.30.ssm_dt.bias
+0.00.445.495 D create_tensor: loading tensor blk.30.ssm_a
+0.00.445.501 D create_tensor: loading tensor blk.30.ssm_beta.weight
+0.00.445.505 D create_tensor: loading tensor blk.30.ssm_alpha.weight
+0.00.445.510 D create_tensor: loading tensor blk.30.ssm_norm.weight
+0.00.445.515 D create_tensor: loading tensor blk.30.ssm_out.weight
+0.00.445.519 D create_tensor: loading tensor blk.30.ffn_gate.weight
+0.00.445.523 D create_tensor: loading tensor blk.30.ffn_down.weight
+0.00.445.527 D create_tensor: loading tensor blk.30.ffn_up.weight
+0.00.445.531 D create_tensor: loading tensor blk.31.attn_norm.weight
+0.00.445.537 D create_tensor: loading tensor blk.31.post_attention_norm.weight
+0.00.445.544 D create_tensor: loading tensor blk.31.attn_q.weight
+0.00.445.550 D create_tensor: loading tensor blk.31.attn_k.weight
+0.00.445.555 D create_tensor: loading tensor blk.31.attn_v.weight
+0.00.445.562 D create_tensor: loading tensor blk.31.attn_output.weight
+0.00.445.568 D create_tensor: loading tensor blk.31.attn_q_norm.weight
+0.00.445.572 D create_tensor: loading tensor blk.31.attn_k_norm.weight
+0.00.445.581 D create_tensor: loading tensor blk.31.ffn_gate.weight
+0.00.445.589 D create_tensor: loading tensor blk.31.ffn_down.weight
+0.00.445.595 D create_tensor: loading tensor blk.31.ffn_up.weight
+0.00.445.949 D done_getting_tensors: tensor 'token_embd.weight' (q4_K) (and 0 others) cannot be used with preferred buffer type CPU_REPACK, using CPU instead
+0.00.657.794 D ggml_metal_log_allocated_size: allocated buffer, size =  5406.92 MiB, ( 5407.36 / 25559.05)
+0.00.712.730 I load_tensors: offloading output layer to GPU
+0.00.712.733 I load_tensors: offloading 31 repeating layers to GPU
+0.00.712.733 I load_tensors: offloaded 33/33 layers to GPU
+0.00.712.736 I load_tensors:   CPU_Mapped model buffer size =   545.62 MiB
+0.00.712.736 I load_tensors:  MTL0_Mapped model buffer size =  5406.91 MiB
+..............................................................................
+0.00.714.877 I common_init_result: added <|endoftext|> logit bias = -inf
+0.00.714.879 I common_init_result: added <|im_end|> logit bias = -inf
+0.00.714.879 I common_init_result: added <|fim_pad|> logit bias = -inf
+0.00.714.880 I common_init_result: added <|repo_name|> logit bias = -inf
+0.00.714.880 I common_init_result: added <|file_sep|> logit bias = -inf
+0.00.714.909 I llama_context: constructing llama_context
+0.00.714.911 I llama_context: n_seq_max     = 1
+0.00.714.911 I llama_context: n_ctx         = 4096
+0.00.714.911 I llama_context: n_ctx_seq     = 4096
+0.00.714.911 I llama_context: n_batch       = 2048
+0.00.714.911 I llama_context: n_ubatch      = 512
+0.00.714.911 I llama_context: causal_attn   = 1
+0.00.714.912 I llama_context: flash_attn    = auto
+0.00.714.912 I llama_context: kv_unified    = false
+0.00.714.912 I llama_context: freq_base     = 10000000.0
+0.00.714.913 I llama_context: freq_scale    = 1
+0.00.714.913 I llama_context: n_rs_seq      = 0
+0.00.714.913 W llama_context: n_ctx_seq (4096) < n_ctx_train (262144) -- the full capacity of the model will not be utilized
+0.00.714.914 I ggml_metal_init: allocating
+0.00.714.940 I ggml_metal_init: found device: Apple M5
+0.00.714.943 I ggml_metal_init: picking default device: Apple M5
+0.00.714.954 I ggml_metal_init: use fusion         = true
+0.00.714.954 I ggml_metal_init: use concurrency    = true
+0.00.714.955 I ggml_metal_init: use graph optimize = true
+0.00.714.962 D set_abort_callback: call
+0.00.715.037 I llama_context:        CPU  output buffer size =     0.95 MiB
+0.00.715.063 D llama_kv_cache: layer   0: filtered
+0.00.715.064 D llama_kv_cache: layer   1: filtered
+0.00.715.064 D llama_kv_cache: layer   2: filtered
+0.00.715.065 D llama_kv_cache: layer   3: dev = MTL0
+0.00.715.069 D llama_kv_cache: layer   4: filtered
+0.00.715.070 D llama_kv_cache: layer   5: filtered
+0.00.715.072 D llama_kv_cache: layer   6: filtered
+0.00.715.072 D llama_kv_cache: layer   7: dev = MTL0
+0.00.715.073 D llama_kv_cache: layer   8: filtered
+0.00.715.073 D llama_kv_cache: layer   9: filtered
+0.00.715.073 D llama_kv_cache: layer  10: filtered
+0.00.715.074 D llama_kv_cache: layer  11: dev = MTL0
+0.00.715.084 D llama_kv_cache: layer  12: filtered
+0.00.715.085 D llama_kv_cache: layer  13: filtered
+0.00.715.085 D llama_kv_cache: layer  14: filtered
+0.00.715.086 D llama_kv_cache: layer  15: dev = MTL0
+0.00.715.087 D llama_kv_cache: layer  16: filtered
+0.00.715.088 D llama_kv_cache: layer  17: filtered
+0.00.715.088 D llama_kv_cache: layer  18: filtered
+0.00.715.088 D llama_kv_cache: layer  19: dev = MTL0
+0.00.715.089 D llama_kv_cache: layer  20: filtered
+0.00.715.089 D llama_kv_cache: layer  21: filtered
+0.00.715.089 D llama_kv_cache: layer  22: filtered
+0.00.715.089 D llama_kv_cache: layer  23: dev = MTL0
+0.00.715.090 D llama_kv_cache: layer  24: filtered
+0.00.715.090 D llama_kv_cache: layer  25: filtered
+0.00.715.090 D llama_kv_cache: layer  26: filtered
+0.00.715.090 D llama_kv_cache: layer  27: dev = MTL0
+0.00.715.091 D llama_kv_cache: layer  28: filtered
+0.00.715.091 D llama_kv_cache: layer  29: filtered
+0.00.715.091 D llama_kv_cache: layer  30: filtered
+0.00.715.092 D llama_kv_cache: layer  31: dev = MTL0
+0.00.718.099 I llama_kv_cache:       MTL0 KV buffer size =   128.00 MiB
+0.00.722.162 I llama_kv_cache: size =  128.00 MiB (  4096 cells,   8 layers,  1/1 seqs), K (f16):   64.00 MiB, V (f16):   64.00 MiB
+0.00.722.164 I llama_kv_cache: attn_rot_k = 0, n_embd_head_k_all = 256
+0.00.722.164 I llama_kv_cache: attn_rot_v = 0, n_embd_head_k_all = 256
+0.00.722.166 D llama_memory_recurrent, layer   0: dev = MTL0
+0.00.722.169 D llama_memory_recurrent, layer   1: dev = MTL0
+0.00.722.170 D llama_memory_recurrent, layer   2: dev = MTL0
+0.00.722.170 D llama_memory_recurrent: layer   3: skipped
+0.00.722.170 D llama_memory_recurrent, layer   4: dev = MTL0
+0.00.722.171 D llama_memory_recurrent, layer   5: dev = MTL0
+0.00.722.171 D llama_memory_recurrent, layer   6: dev = MTL0
+0.00.722.171 D llama_memory_recurrent: layer   7: skipped
+0.00.722.171 D llama_memory_recurrent, layer   8: dev = MTL0
+0.00.722.172 D llama_memory_recurrent, layer   9: dev = MTL0
+0.00.722.172 D llama_memory_recurrent, layer  10: dev = MTL0
+0.00.722.172 D llama_memory_recurrent: layer  11: skipped
+0.00.722.173 D llama_memory_recurrent, layer  12: dev = MTL0
+0.00.722.177 D llama_memory_recurrent, layer  13: dev = MTL0
+0.00.722.177 D llama_memory_recurrent, layer  14: dev = MTL0
+0.00.722.177 D llama_memory_recurrent: layer  15: skipped
+0.00.722.177 D llama_memory_recurrent, layer  16: dev = MTL0
+0.00.722.178 D llama_memory_recurrent, layer  17: dev = MTL0
+0.00.722.178 D llama_memory_recurrent, layer  18: dev = MTL0
+0.00.722.178 D llama_memory_recurrent: layer  19: skipped
+0.00.722.178 D llama_memory_recurrent, layer  20: dev = MTL0
+0.00.722.179 D llama_memory_recurrent, layer  21: dev = MTL0
+0.00.722.179 D llama_memory_recurrent, layer  22: dev = MTL0
+0.00.722.179 D llama_memory_recurrent: layer  23: skipped
+0.00.722.179 D llama_memory_recurrent, layer  24: dev = MTL0
+0.00.722.180 D llama_memory_recurrent, layer  25: dev = MTL0
+0.00.722.180 D llama_memory_recurrent, layer  26: dev = MTL0
+0.00.722.180 D llama_memory_recurrent: layer  27: skipped
+0.00.722.180 D llama_memory_recurrent, layer  28: dev = MTL0
+0.00.722.181 D llama_memory_recurrent, layer  29: dev = MTL0
+0.00.722.182 D llama_memory_recurrent, layer  30: dev = MTL0
+0.00.722.184 D llama_memory_recurrent: layer  31: skipped
+0.00.724.957 I llama_memory_recurrent:       MTL0 RS buffer size =    50.25 MiB
+0.00.724.961 I llama_memory_recurrent: size =   50.25 MiB (     1 cells,  32 layers,  1 seqs  0 rs_seq), R (f32):    2.25 MiB, S (f32):   48.00 MiB
+0.00.724.962 D llama_context: enumerating backends
+0.00.724.964 D llama_context: backend_ptrs.size() = 3
+0.00.724.965 I sched_reserve: reserving ...
+0.00.724.965 D sched_reserve: max_nodes = 20480
+0.00.725.956 D sched_reserve: reserving full memory module
+0.00.725.960 D sched_reserve: worst-case: n_tokens = 512, n_seqs = 1, n_outputs = 1
+0.00.725.961 D graph_reserve: reserving a graph for ubatch with n_tokens =    1, n_seqs =  1, n_outputs =    1
+0.00.726.816 I sched_reserve: Flash Attention was auto, set to enabled
+0.00.726.817 I sched_reserve: resolving fused Gated Delta Net support:
+0.00.726.817 D graph_reserve: reserving a graph for ubatch with n_tokens =    1, n_seqs =  1, n_outputs =    1
+0.00.727.604 I sched_reserve: fused Gated Delta Net (autoregressive) enabled
+0.00.727.608 D graph_reserve: reserving a graph for ubatch with n_tokens =   16, n_seqs =  1, n_outputs =   16
+0.00.728.402 I sched_reserve: fused Gated Delta Net (chunked) enabled
+0.00.728.404 D graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  1, n_outputs =  512
+0.00.743.230 D graph_reserve: reserving a graph for ubatch with n_tokens =    1, n_seqs =  1, n_outputs =    1
+0.00.744.149 D graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  1, n_outputs =  512
+0.00.745.043 I sched_reserve:       MTL0 compute buffer size =   505.02 MiB
+0.00.745.045 I sched_reserve:        CPU compute buffer size =    20.02 MiB
+0.00.745.045 I sched_reserve: graph nodes  = 1855
+0.00.745.045 I sched_reserve: graph splits = 2
+0.00.745.046 I sched_reserve: reserve took 20.08 ms, sched copies = 1
+0.00.745.117 D set_adapters_lora: adapters = 0x0
+0.00.745.118 D adapters_lora_are_same: adapters = 0x0
+0.00.745.118 I common_init_from_params: warming up the model with an empty run - please wait ... (--no-warmup to disable)
+0.00.745.118 D set_warmup: value = 1
+0.00.747.287 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_rms_norm_mul_f32_4', name = 'kernel_rms_norm_mul_f32_4'
+0.00.747.363 D ggml_metal_library_compile_pipeline: loaded kernel_rms_norm_mul_f32_4                     0x1045b3cf0 | th_max = 1024 | th_width =   32
+0.00.747.379 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_unary_f32_f32_4', name = 'kernel_unary_f32_f32_4_op=10_cnt=1'
+0.00.747.440 D ggml_metal_library_compile_pipeline: loaded kernel_unary_f32_f32_4_op=10_cnt=1            0x1045b51b0 | th_max = 1024 | th_width =   32
+0.00.747.450 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_mul_mv_q5_K_f32', name = 'kernel_mul_mv_q5_K_f32_nsg=2_ne12=1_r2=1_r3=1'
+0.00.747.497 D ggml_metal_library_compile_pipeline: loaded kernel_mul_mv_q5_K_f32_nsg=2_ne12=1_r2=1_r3=1      0x1045b5a30 | th_max = 1024 | th_width =   32
+0.00.747.503 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_get_rows_f32', name = 'kernel_get_rows_f32'
+0.00.747.532 D ggml_metal_library_compile_pipeline: loaded kernel_get_rows_f32                           0x1045b5db0 | th_max = 1024 | th_width =   32
+0.00.747.536 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_concat', name = 'kernel_concat'
+0.00.747.561 D ggml_metal_library_compile_pipeline: loaded kernel_concat                                 0x1045b6130 | th_max = 1024 | th_width =   32
+0.00.747.567 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_mul_mv_ext_q8_0_f32_r1_2', name = 'kernel_mul_mv_ext_q8_0_f32_r1_2_nsg=2_nxpsg=16_ne12=1_r2=1_r3=1'
+0.00.747.607 D ggml_metal_library_compile_pipeline: loaded kernel_mul_mv_ext_q8_0_f32_r1_2_nsg=2_nxpsg=16_ne12=1_r2=1_r3=1      0xaa5888000 | th_max = 1024 | th_width =   32
+0.00.747.612 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_cpy_f32_f32', name = 'kernel_cpy_f32_f32'
+0.00.747.637 D ggml_metal_library_compile_pipeline: loaded kernel_cpy_f32_f32                            0xaa5888380 | th_max = 1024 | th_width =   32
+0.00.747.641 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_unary_f32_f32_4', name = 'kernel_unary_f32_f32_4_op=10_cnt=0'
+0.00.747.676 D ggml_metal_library_compile_pipeline: loaded kernel_unary_f32_f32_4_op=10_cnt=0            0xaa5888700 | th_max = 1024 | th_width =   32
+0.00.747.681 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_ssm_conv_f32_f32_batched_4', name = 'kernel_ssm_conv_f32_f32_batched_4_ssm_conv_bs=2'
+0.00.747.713 D ggml_metal_library_compile_pipeline: loaded kernel_ssm_conv_f32_f32_batched_4_ssm_conv_bs=2      0xaa5888a80 | th_max = 1024 | th_width =   32
+0.00.747.717 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_bin_fuse_f32_f32_f32_4', name = 'kernel_bin_fuse_f32_f32_f32_4_op=0_nf=1_rb=1_cb=0'
+0.00.747.749 D ggml_metal_library_compile_pipeline: loaded kernel_bin_fuse_f32_f32_f32_4_op=0_nf=1_rb=1_cb=0      0xaa5888e00 | th_max = 1024 | th_width =   32
+0.00.747.753 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_unary_f32_f32', name = 'kernel_unary_f32_f32_op=102_cnt=1'
+0.00.747.783 D ggml_metal_library_compile_pipeline: loaded kernel_unary_f32_f32_op=102_cnt=1             0xaa5889180 | th_max = 1024 | th_width =   32
+0.00.747.787 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_unary_f32_f32_4', name = 'kernel_unary_f32_f32_4_op=106_cnt=1'
+0.00.747.812 D ggml_metal_library_compile_pipeline: loaded kernel_unary_f32_f32_4_op=106_cnt=1           0xaa5889500 | th_max = 1024 | th_width =   32
+0.00.747.815 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_unary_f32_f32_4', name = 'kernel_unary_f32_f32_4_op=115_cnt=1'
+0.00.747.842 D ggml_metal_library_compile_pipeline: loaded kernel_unary_f32_f32_4_op=115_cnt=1           0xaa5889880 | th_max = 1024 | th_width =   32
+0.00.747.855 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_l2_norm_f32_f32_4', name = 'kernel_l2_norm_f32_f32_4'
+0.00.747.876 D ggml_metal_library_compile_pipeline: loaded kernel_l2_norm_f32_f32_4                      0xaa5889c00 | th_max = 1024 | th_width =   32
+0.00.747.879 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_bin_fuse_f32_f32_f32_4', name = 'kernel_bin_fuse_f32_f32_f32_4_op=2_nf=1_rb=1_cb=0'
+0.00.747.912 D ggml_metal_library_compile_pipeline: loaded kernel_bin_fuse_f32_f32_f32_4_op=2_nf=1_rb=1_cb=0      0xaa5889f80 | th_max = 1024 | th_width =   32
+0.00.747.917 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_mul_mv_q4_K_f32', name = 'kernel_mul_mv_q4_K_f32_nsg=2_ne12=1_r2=1_r3=1'
+0.00.747.953 D ggml_metal_library_compile_pipeline: loaded kernel_mul_mv_q4_K_f32_nsg=2_ne12=1_r2=1_r3=1      0xaa588a300 | th_max = 1024 | th_width =   32
+0.00.747.958 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_gated_delta_net_f32_4', name = 'kernel_gated_delta_net_f32_4_ne20=128_ne30=1_K=1'
+0.00.747.993 D ggml_metal_library_compile_pipeline: loaded kernel_gated_delta_net_f32_4_ne20=128_ne30=1_K=1      0xaa588a680 | th_max = 1024 | th_width =   32
+0.00.748.003 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_bin_fuse_f32_f32_f32_4', name = 'kernel_bin_fuse_f32_f32_f32_4_op=2_nf=1_rb=0_cb=0'
+0.00.748.036 D ggml_metal_library_compile_pipeline: loaded kernel_bin_fuse_f32_f32_f32_4_op=2_nf=1_rb=0_cb=0      0xaa588aa00 | th_max = 1024 | th_width =   32
+0.00.748.041 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_bin_fuse_f32_f32_f32_4', name = 'kernel_bin_fuse_f32_f32_f32_4_op=0_nf=1_rb=0_cb=0'
+0.00.748.071 D ggml_metal_library_compile_pipeline: loaded kernel_bin_fuse_f32_f32_f32_4_op=0_nf=1_rb=0_cb=0      0xaa588ad80 | th_max = 1024 | th_width =   32
+0.00.748.089 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_swiglu_f32', name = 'kernel_swiglu_f32'
+0.00.748.109 D ggml_metal_library_compile_pipeline: loaded kernel_swiglu_f32                             0xaa588b100 | th_max = 1024 | th_width =   32
+0.00.748.113 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_mul_mv_q6_K_f32', name = 'kernel_mul_mv_q6_K_f32_nsg=2_ne12=1_r2=1_r3=1'
+0.00.748.154 D ggml_metal_library_compile_pipeline: loaded kernel_mul_mv_q6_K_f32_nsg=2_ne12=1_r2=1_r3=1      0xaa588b480 | th_max = 1024 | th_width =   32
+0.00.748.384 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_set_rows_f16_i64', name = 'kernel_set_rows_f16_i64'
+0.00.748.411 D ggml_metal_library_compile_pipeline: loaded kernel_set_rows_f16_i64                       0xaa588bb80 | th_max = 1024 | th_width =   32
+0.00.748.415 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_rope_multi_f32', name = 'kernel_rope_multi_f32_imrope=1'
+0.00.748.457 D ggml_metal_library_compile_pipeline: loaded kernel_rope_multi_f32_imrope=1                0xaa58e0000 | th_max = 1024 | th_width =   32
+0.00.748.465 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_flash_attn_ext_vec_f16_dk256_dv256', name = 'kernel_flash_attn_ext_vec_f16_dk256_dv256_mask=1_sink=0_bias=0_scap=0_kvpad=0_ns10=1024_ns20=1024_nsg=1_nwg=32'
+0.00.748.515 D ggml_metal_library_compile_pipeline: loaded kernel_flash_attn_ext_vec_f16_dk256_dv256_mask=1_sink=0_bias=0_scap=0_kvpad=0_ns10=1024_ns20=1024_nsg=1_nwg=32      0xaa58e0380 | th_max = 1024 | th_width =   32
+0.00.748.527 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_flash_attn_ext_vec_reduce', name = 'kernel_flash_attn_ext_vec_reduce_dv=256_nwg=32'
+0.00.748.557 D ggml_metal_library_compile_pipeline: loaded kernel_flash_attn_ext_vec_reduce_dv=256_nwg=32      0xaa58e0700 | th_max = 1024 | th_width =   32
+0.00.748.562 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_unary_f32_f32_4', name = 'kernel_unary_f32_f32_4_op=102_cnt=1'
+0.00.748.586 D ggml_metal_library_compile_pipeline: loaded kernel_unary_f32_f32_4_op=102_cnt=1           0xaa58e0a80 | th_max = 1024 | th_width =   32
+0.00.808.465 D set_warmup: value = 0
+0.00.810.131 I llama_completion: llama threadpool init, n_threads = 4
+0.00.810.139 D attach_threadpool: call
+0.00.810.140 I 
+0.00.810.151 I system_info: n_threads = 4 (n_threads_batch = 4) / 10 | MTL : EMBED_LIBRARY = 1 | CPU : NEON = 1 | ARM_FMA = 1 | FP16_VA = 1 | MATMUL_INT8 = 1 | DOTPROD = 1 | SME = 1 | ACCELERATE = 1 | OPENMP = 1 | REPACK = 1 | 
+0.00.810.151 I 
+0.00.810.152 D n_ctx: 4096, add_bos: 0
+0.00.810.153 D tokenize the prompt
+0.00.812.006 D prompt: "Passage 1. A benchmark number without its measurement conditions is a rumor with digits in it. Tokens per second can describe how fast a model reads a prompt, how fast it writes an answer, or how long the whole exchange took including loading the weights from disk. These three rates differ by an order of magnitude on the same machine in the same minute, and none of them is wrong. What is wrong is quoting one of them without saying which one it is. Passage 2. A benchmark number without its measurement conditions is a rumor with digits in it. Tokens per second can describe how fast a model reads a prompt, how fast it writes an answer, or how long the whole exchange took including loading the weights from disk. These three rates differ by an order of magnitude on the same machine in the same minute, and none of them is wrong. What is wrong is quoting one of them without saying which one it is. Passage 3. A benchmark number without its measurement conditions is a rumor with digits in it. Tokens per second can describe how fast a model reads a prompt, how fast it writes an answer, or how long the whole exchange took including loading the weights from disk. These three rates differ by an order of magnitude on the same machine in the same minute, and none of them is wrong. What is wrong is quoting one of them without saying which one it is. Passage 4. A benchmark number without its measurement conditions is a rumor with digits in it. Tokens per second can describe how fast a model reads a prompt, how fast it writes an answer, or how long the whole exchange took including loading the weights from disk. These three rates differ by an order of magnitude on the same machine in the same minute, and none of them is wrong. What is wrong is quoting one of them without saying which one it is. Passage 5. A benchmark number without its measurement conditions is a rumor with digits in it. Tokens per second can describe how fast a model reads a prompt, how fast it writes an answer, or how long the whole exchange took including loading the weights from disk. These three rates differ by an order of magnitude on the same machine in the same minute, and none of them is wrong. What is wrong is quoting one of them without saying which one it is. Passage 6. A benchmark number without its measurement conditions is a rumor with digits in it. Tokens per second can describe how fast a model reads a prompt, how fast it writes an answer, or how long the whole exchange took including loading the weights from disk. These three rates differ by an order of magnitude on the same machine in the same minute, and none of them is wrong. What is wrong is quoting one of them without saying which one it is. Passage 7. A benchmark number without its measurement conditions is a rumor with digits in it. Tokens per second can describe how fast a model reads a prompt, how fast it writes an answer, or how long the whole exchange took including loading the weights from disk. These three rates differ by an order of magnitude on the same machine in the same minute, and none of them is wrong. What is wrong is quoting one of them without saying which one it is. Passage 8. A benchmark number without its measurement conditions is a rumor with digits in it. Tokens per second can describe how fast a model reads a prompt, how fast it writes an answer, or how long the whole exchange took including loading the weights from disk. These three rates differ by an order of magnitude on the same machine in the same minute, and none of them is wrong. What is wrong is quoting one of them without saying which one it is. Passage 9. A benchmark number without its measurement conditions is a rumor with digits in it. Tokens per second can describe how fast a model reads a prompt, how fast it writes an answer, or how long the whole exchange took including loading the weights from disk. These three rates differ by an order of magnitude on the same machine in the same minute, and none of them is wrong. What is wrong is quoting one of them without saying which one it is. Passage 10. A benchmark number without its measurement conditions is a rumor with digits in it. Tokens per second can describe how fast a model reads a prompt, how fast it writes an answer, or how long the whole exchange took including loading the weights from disk. These three rates differ by an order of magnitude on the same machine in the same minute, and none of them is wrong. What is wrong is quoting one of them without saying which one it is. Passage 11. A benchmark number without its measurement conditions is a rumor with digits in it. Tokens per second can describe how fast a model reads a prompt, how fast it writes an answer, or how long the whole exchange took including loading the weights from disk. These three rates differ by an order of magnitude on the same machine in the same minute, and none of them is wrong. What is wrong is quoting one of them without saying which one it is. Passage 12. A benchmark number without its measurement conditions is a rumor with digits in it. Tokens per second can describe how fast a model reads a prompt, how fast it writes an answer, or how long the whole exchange took including loading the weights from disk. These three rates differ by an order of magnitude on the same machine in the same minute, and none of them is wrong. What is wrong is quoting one of them without saying which one it is. Passage 13. A benchmark number without its measurement conditions is a rumor with digits in it. Tokens per second can describe how fast a model reads a prompt, how fast it writes an answer, or how long the whole exchange took including loading the weights from disk. These three rates differ by an order of magnitude on the same machine in the same minute, and none of them is wrong. What is wrong is quoting one of them without saying which one it is. Passage 14. A benchmark number without its measurement conditions is a rumor with digits in it. Tokens per second can describe how fast a model reads a prompt, how fast it writes an answer, or how long the whole exchange took including loading the weights from disk. These three rates differ by an order of magnitude on the same machine in the same minute, and none of them is wrong. What is wrong is quoting one of them without saying which one it is. Passage 15. A benchmark number without its measurement conditions is a rumor with digits in it. Tokens per second can describe how fast a model reads a prompt, how fast it writes an answer, or how long the whole exchange took including loading the weights from disk. These three rates differ by an order of magnitude on the same machine in the same minute, and none of them is wrong. What is wrong is quoting one of them without saying which one it is. Passage 16. A benchmark number without its measurement conditions is a rumor with digits in it. Tokens per second can describe how fast a model reads a prompt, how fast it writes an answer, or how long the whole exchange took including loading the weights from disk. These three rates differ by an order of magnitude on the same machine in the same minute, and none of them is wrong. What is wrong is quoting one of them without saying which one it is. Passage 17. A benchmark number without its measurement conditions is a rumor with digits in it. Tokens per second can describe how fast a model reads a prompt, how fast it writes an answer, or how long the whole exchange took including loading the weights from disk. These three rates differ by an order of magnitude on the same machine in the same minute, and none of them is wrong. What is wrong is quoting one of them without saying which one it is. Passage 18. A benchmark number without its measurement conditions is a rumor with digits in it. Tokens per second can describe how fast a model reads a prompt, how fast it writes an answer, or how long the whole exchange took including loading the weights from disk. These three rates differ by an order of magnitude on the same machine in the same minute, and none of them is wrong. What is wrong is quoting one of them without saying which one it is. Passage 19. A benchmark number without its measurement conditions is a rumor with digits in it. Tokens per second can describe how fast a model reads a prompt, how fast it writes an answer, or how long the whole exchange took including loading the weights from disk. These three rates differ by an order of magnitude on the same machine in the same minute, and none of them is wrong. What is wrong is quoting one of them without saying which one it is. Passage 20. A benchmark number without its measurement conditions is a rumor with digits in it. Tokens per second can describe how fast a model reads a prompt, how fast it writes an answer, or how long the whole exchange took including loading the weights from disk. These three rates differ by an order of magnitude on the same machine in the same minute, and none of them is wrong. What is wrong is quoting one of them without saying which one it is. Passage 21. A benchmark number without its measurement conditions is a rumor with digits in it. Tokens per second can describe how fast a model reads a prompt, how fast it writes an answer, or how long the whole exchange took including loading the weights from disk. These three rates differ by an order of magnitude on the same machine in the same minute, and none of them is wrong. What is wrong is quoting one of them without saying which one it is. Passage 22. A benchmark number without its measurement conditions is a rumor with digits in it. Tokens per second can describe how fast a model reads a prompt, how fast it writes an answer, or how long the whole exchange took including loading the weights from disk. These three rates differ by an order of magnitude on the same machine in the same minute, and none of them is wrong. What is wrong is quoting one of them without saying which one it is. Passage 23. A benchmark number without its measurement conditions is a rumor with digits in it. Tokens per second can describe how fast a model reads a prompt, how fast it writes an answer, or how long the whole exchange took including loading the weights from disk. These three rates differ by an order of magnitude on the same machine in the same minute, and none of them is wrong. What is wrong is quoting one of them without saying which one it is. Passage 24. A benchmark number without its measurement conditions is a rumor with digits in it. Tokens per second can describe how fast a model reads a prompt, how fast it writes an answer, or how long the whole exchange took including loading the weights from disk. These three rates differ by an order of magnitude on the same machine in the same minute, and none of them is wrong. What is wrong is quoting one of them without saying which one it is. Passage 25. A benchmark number without its measurement conditions is a rumor with digits in it. Tokens per second can describe how fast a model reads a prompt, how fast it writes an answer, or how long the whole exchange took including loading the weights from disk. These three rates differ by an order of magnitude on the same machine in the same minute, and none of them is wrong. What is wrong is quoting one of them without saying which one it is. Passage 26. A benchmark number without its measurement conditions is a rumor with digits in it. Tokens per second can describe how fast a model reads a prompt, how fast it writes an answer, or how long the whole exchange took including loading the weights from disk. These three rates differ by an order of magnitude on the same machine in the same minute, and none of them is wrong. What is wrong is quoting one of them without saying which one it is. Passage 27. A benchmark number without its measurement conditions is a rumor with digits in it. Tokens per second can describe how fast a model reads a prompt, how fast it writes an answer, or how long the whole exchange took including loading the weights from disk. These three rates differ by an order of magnitude on the same machine in the same minute, and none of them is wrong. What is wrong is quoting one of them without saying which one it is. "
+0.00.812.175 D tokens: [ 'Pass':11839, 'age':416, ' ':220, '1':16, '.':13, ' A':357, ' benchmark':27502, ' number':1324, ' without':1973, ' its':1141, ' measurement':18100, ' conditions':4530, ' is':369, ' a':264, ' rumor':55957, ' with':440, ' digits':17955, ' in':303, ' it':424, '.':13, ' Tokens':56212, ' per':791, ' second':2018, ' can':628, ' describe':7276, ' how':1204, ' fast':4778, ' a':264, ' model':1558, ' reads':15339, ' a':264, ' prompt':9640, ',':11, ' how':1204, ' fast':4778, ' it':424, ' writes':13514, ' an':449, ' answer':4087, ',':11, ' or':466, ' how':1204, ' long':1248, ' the':279, ' whole':4220, ' exchange':9013, ' took':3738, ' including':2583, ' loading':8019, ' the':279, ' weights':13914, ' from':494, ' disk':12977, '.':13, ' These':4081, ' three':2250, ' rates':7566, ' differ':1684, ' by':539, ' an':449, ' order':1906, ' of':314, ' magnitude':24806, ' on':383, ' the':279, ' same':1788, ' machine':5484, ' in':303, ' the':279, ' same':1788, ' minute':9104, ',':11, ' and':321, ' none':6643, ' of':314, ' them':1070, ' is':369, ' wrong':4808, '.':13, ' What':3437, ' is':369, ' wrong':4808, ' is':369, ' quoting':54624, ' one':799, ' of':314, ' them':1070, ' without':1973, ' saying':5315, ' which':864, ' one':799, ' it':424, ' is':369, '.':13, ' Passage':95072, ' ':220, '2':17, '.':13, ' A':357, ' benchmark':27502, ' number':1324, ' without':1973, ' its':1141, ' measurement':18100, ' conditions':4530, ' is':369, ' a':264, ' rumor':55957, ' with':440, ' digits':17955, ' in':303, ' it':424, '.':13, ' Tokens':56212, ' per':791, ' second':2018, ' can':628, ' describe':7276, ' how':1204, ' fast':4778, ' a':264, ' model':1558, ' reads':15339, ' a':264, ' prompt':9640, ',':11, ' how':1204, ' fast':4778, ' it':424, ' writes':13514, ' an':449, ' answer':4087, ',':11, ' or':466, ' how':1204, ' long':1248, ' the':279, ' whole':4220, ' exchange':9013, ' took':3738, ' including':2583, ' loading':8019, ' the':279, ' weights':13914, ' from':494, ' disk':12977, '.':13, ' These':4081, ' three':2250, ' rates':7566, ' differ':1684, ' by':539, ' an':449, ' order':1906, ' of':314, ' magnitude':24806, ' on':383, ' the':279, ' same':1788, ' machine':5484, ' in':303, ' the':279, ' same':1788, ' minute':9104, ',':11, ' and':321, ' none':6643, ' of':314, ' them':1070, ' is':369, ' wrong':4808, '.':13, ' What':3437, ' is':369, ' wrong':4808, ' is':369, ' quoting':54624, ' one':799, ' of':314, ' them':1070, ' without':1973, ' saying':5315, ' which':864, ' one':799, ' it':424, ' is':369, '.':13, ' Passage':95072, ' ':220, '3':18, '.':13, ' A':357, ' benchmark':27502, ' number':1324, ' without':1973, ' its':1141, ' measurement':18100, ' conditions':4530, ' is':369, ' a':264, ' rumor':55957, ' with':440, ' digits':17955, ' in':303, ' it':424, '.':13, ' Tokens':56212, ' per':791, ' second':2018, ' can':628, ' describe':7276, ' how':1204, ' fast':4778, ' a':264, ' model':1558, ' reads':15339, ' a':264, ' prompt':9640, ',':11, ' how':1204, ' fast':4778, ' it':424, ' writes':13514, ' an':449, ' answer':4087, ',':11, ' or':466, ' how':1204, ' long':1248, ' the':279, ' whole':4220, ' exchange':9013, ' took':3738, ' including':2583, ' loading':8019, ' the':279, ' weights':13914, ' from':494, ' disk':12977, '.':13, ' These':4081, ' three':2250, ' rates':7566, ' differ':1684, ' by':539, ' an':449, ' order':1906, ' of':314, ' magnitude':24806, ' on':383, ' the':279, ' same':1788, ' machine':5484, ' in':303, ' the':279, ' same':1788, ' minute':9104, ',':11, ' and':321, ' none':6643, ' of':314, ' them':1070, ' is':369, ' wrong':4808, '.':13, ' What':3437, ' is':369, ' wrong':4808, ' is':369, ' quoting':54624, ' one':799, ' of':314, ' them':1070, ' without':1973, ' saying':5315, ' which':864, ' one':799, ' it':424, ' is':369, '.':13, ' Passage':95072, ' ':220, '4':19, '.':13, ' A':357, ' benchmark':27502, ' number':1324, ' without':1973, ' its':1141, ' measurement':18100, ' conditions':4530, ' is':369, ' a':264, ' rumor':55957, ' with':440, ' digits':17955, ' in':303, ' it':424, '.':13, ' Tokens':56212, ' per':791, ' second':2018, ' can':628, ' describe':7276, ' how':1204, ' fast':4778, ' a':264, ' model':1558, ' reads':15339, ' a':264, ' prompt':9640, ',':11, ' how':1204, ' fast':4778, ' it':424, ' writes':13514, ' an':449, ' answer':4087, ',':11, ' or':466, ' how':1204, ' long':1248, ' the':279, ' whole':4220, ' exchange':9013, ' took':3738, ' including':2583, ' loading':8019, ' the':279, ' weights':13914, ' from':494, ' disk':12977, '.':13, ' These':4081, ' three':2250, ' rates':7566, ' differ':1684, ' by':539, ' an':449, ' order':1906, ' of':314, ' magnitude':24806, ' on':383, ' the':279, ' same':1788, ' machine':5484, ' in':303, ' the':279, ' same':1788, ' minute':9104, ',':11, ' and':321, ' none':6643, ' of':314, ' them':1070, ' is':369, ' wrong':4808, '.':13, ' What':3437, ' is':369, ' wrong':4808, ' is':369, ' quoting':54624, ' one':799, ' of':314, ' them':1070, ' without':1973, ' saying':5315, ' which':864, ' one':799, ' it':424, ' is':369, '.':13, ' Passage':95072, ' ':220, '5':20, '.':13, ' A':357, ' benchmark':27502, ' number':1324, ' without':1973, ' its':1141, ' measurement':18100, ' conditions':4530, ' is':369, ' a':264, ' rumor':55957, ' with':440, ' digits':17955, ' in':303, ' it':424, '.':13, ' Tokens':56212, ' per':791, ' second':2018, ' can':628, ' describe':7276, ' how':1204, ' fast':4778, ' a':264, ' model':1558, ' reads':15339, ' a':264, ' prompt':9640, ',':11, ' how':1204, ' fast':4778, ' it':424, ' writes':13514, ' an':449, ' answer':4087, ',':11, ' or':466, ' how':1204, ' long':1248, ' the':279, ' whole':4220, ' exchange':9013, ' took':3738, ' including':2583, ' loading':8019, ' the':279, ' weights':13914, ' from':494, ' disk':12977, '.':13, ' These':4081, ' three':2250, ' rates':7566, ' differ':1684, ' by':539, ' an':449, ' order':1906, ' of':314, ' magnitude':24806, ' on':383, ' the':279, ' same':1788, ' machine':5484, ' in':303, ' the':279, ' same':1788, ' minute':9104, ',':11, ' and':321, ' none':6643, ' of':314, ' them':1070, ' is':369, ' wrong':4808, '.':13, ' What':3437, ' is':369, ' wrong':4808, ' is':369, ' quoting':54624, ' one':799, ' of':314, ' them':1070, ' without':1973, ' saying':5315, ' which':864, ' one':799, ' it':424, ' is':369, '.':13, ' Passage':95072, ' ':220, '6':21, '.':13, ' A':357, ' benchmark':27502, ' number':1324, ' without':1973, ' its':1141, ' measurement':18100, ' conditions':4530, ' is':369, ' a':264, ' rumor':55957, ' with':440, ' digits':17955, ' in':303, ' it':424, '.':13, ' Tokens':56212, ' per':791, ' second':2018, ' can':628, ' describe':7276, ' how':1204, ' fast':4778, ' a':264, ' model':1558, ' reads':15339, ' a':264, ' prompt':9640, ',':11, ' how':1204, ' fast':4778, ' it':424, ' writes':13514, ' an':449, ' answer':4087, ',':11, ' or':466, ' how':1204, ' long':1248, ' the':279, ' whole':4220, ' exchange':9013, ' took':3738, ' including':2583, ' loading':8019, ' the':279, ' weights':13914, ' from':494, ' disk':12977, '.':13, ' These':4081, ' three':2250, ' rates':7566, ' differ':1684, ' by':539, ' an':449, ' order':1906, ' of':314, ' magnitude':24806, ' on':383, ' the':279, ' same':1788, ' machine':5484, ' in':303, ' the':279, ' same':1788, ' minute':9104, ',':11, ' and':321, ' none':6643, ' of':314, ' them':1070, ' is':369, ' wrong':4808, '.':13, ' What':3437, ' is':369, ' wrong':4808, ' is':369, ' quoting':54624, ' one':799, ' of':314, ' them':1070, ' without':1973, ' saying':5315, ' which':864, ' one':799, ' it':424, ' is':369, '.':13, ' Passage':95072, ' ':220, '7':22, '.':13, ' A':357, ' benchmark':27502, ' number':1324, ' without':1973, ' its':1141, ' measurement':18100, ' conditions':4530, ' is':369, ' a':264, ' rumor':55957, ' with':440, ' digits':17955, ' in':303, ' it':424, '.':13, ' Tokens':56212, ' per':791, ' second':2018, ' can':628, ' describe':7276, ' how':1204, ' fast':4778, ' a':264, ' model':1558, ' reads':15339, ' a':264, ' prompt':9640, ',':11, ' how':1204, ' fast':4778, ' it':424, ' writes':13514, ' an':449, ' answer':4087, ',':11, ' or':466, ' how':1204, ' long':1248, ' the':279, ' whole':4220, ' exchange':9013, ' took':3738, ' including':2583, ' loading':8019, ' the':279, ' weights':13914, ' from':494, ' disk':12977, '.':13, ' These':4081, ' three':2250, ' rates':7566, ' differ':1684, ' by':539, ' an':449, ' order':1906, ' of':314, ' magnitude':24806, ' on':383, ' the':279, ' same':1788, ' machine':5484, ' in':303, ' the':279, ' same':1788, ' minute':9104, ',':11, ' and':321, ' none':6643, ' of':314, ' them':1070, ' is':369, ' wrong':4808, '.':13, ' What':3437, ' is':369, ' wrong':4808, ' is':369, ' quoting':54624, ' one':799, ' of':314, ' them':1070, ' without':1973, ' saying':5315, ' which':864, ' one':799, ' it':424, ' is':369, '.':13, ' Passage':95072, ' ':220, '8':23, '.':13, ' A':357, ' benchmark':27502, ' number':1324, ' without':1973, ' its':1141, ' measurement':18100, ' conditions':4530, ' is':369, ' a':264, ' rumor':55957, ' with':440, ' digits':17955, ' in':303, ' it':424, '.':13, ' Tokens':56212, ' per':791, ' second':2018, ' can':628, ' describe':7276, ' how':1204, ' fast':4778, ' a':264, ' model':1558, ' reads':15339, ' a':264, ' prompt':9640, ',':11, ' how':1204, ' fast':4778, ' it':424, ' writes':13514, ' an':449, ' answer':4087, ',':11, ' or':466, ' how':1204, ' long':1248, ' the':279, ' whole':4220, ' exchange':9013, ' took':3738, ' including':2583, ' loading':8019, ' the':279, ' weights':13914, ' from':494, ' disk':12977, '.':13, ' These':4081, ' three':2250, ' rates':7566, ' differ':1684, ' by':539, ' an':449, ' order':1906, ' of':314, ' magnitude':24806, ' on':383, ' the':279, ' same':1788, ' machine':5484, ' in':303, ' the':279, ' same':1788, ' minute':9104, ',':11, ' and':321, ' none':6643, ' of':314, ' them':1070, ' is':369, ' wrong':4808, '.':13, ' What':3437, ' is':369, ' wrong':4808, ' is':369, ' quoting':54624, ' one':799, ' of':314, ' them':1070, ' without':1973, ' saying':5315, ' which':864, ' one':799, ' it':424, ' is':369, '.':13, ' Passage':95072, ' ':220, '9':24, '.':13, ' A':357, ' benchmark':27502, ' number':1324, ' without':1973, ' its':1141, ' measurement':18100, ' conditions':4530, ' is':369, ' a':264, ' rumor':55957, ' with':440, ' digits':17955, ' in':303, ' it':424, '.':13, ' Tokens':56212, ' per':791, ' second':2018, ' can':628, ' describe':7276, ' how':1204, ' fast':4778, ' a':264, ' model':1558, ' reads':15339, ' a':264, ' prompt':9640, ',':11, ' how':1204, ' fast':4778, ' it':424, ' writes':13514, ' an':449, ' answer':4087, ',':11, ' or':466, ' how':1204, ' long':1248, ' the':279, ' whole':4220, ' exchange':9013, ' took':3738, ' including':2583, ' loading':8019, ' the':279, ' weights':13914, ' from':494, ' disk':12977, '.':13, ' These':4081, ' three':2250, ' rates':7566, ' differ':1684, ' by':539, ' an':449, ' order':1906, ' of':314, ' magnitude':24806, ' on':383, ' the':279, ' same':1788, ' machine':5484, ' in':303, ' the':279, ' same':1788, ' minute':9104, ',':11, ' and':321, ' none':6643, ' of':314, ' them':1070, ' is':369, ' wrong':4808, '.':13, ' What':3437, ' is':369, ' wrong':4808, ' is':369, ' quoting':54624, ' one':799, ' of':314, ' them':1070, ' without':1973, ' saying':5315, ' which':864, ' one':799, ' it':424, ' is':369, '.':13, ' Passage':95072, ' ':220, '1':16, '0':15, '.':13, ' A':357, ' benchmark':27502, ' number':1324, ' without':1973, ' its':1141, ' measurement':18100, ' conditions':4530, ' is':369, ' a':264, ' rumor':55957, ' with':440, ' digits':17955, ' in':303, ' it':424, '.':13, ' Tokens':56212, ' per':791, ' second':2018, ' can':628, ' describe':7276, ' how':1204, ' fast':4778, ' a':264, ' model':1558, ' reads':15339, ' a':264, ' prompt':9640, ',':11, ' how':1204, ' fast':4778, ' it':424, ' writes':13514, ' an':449, ' answer':4087, ',':11, ' or':466, ' how':1204, ' long':1248, ' the':279, ' whole':4220, ' exchange':9013, ' took':3738, ' including':2583, ' loading':8019, ' the':279, ' weights':13914, ' from':494, ' disk':12977, '.':13, ' These':4081, ' three':2250, ' rates':7566, ' differ':1684, ' by':539, ' an':449, ' order':1906, ' of':314, ' magnitude':24806, ' on':383, ' the':279, ' same':1788, ' machine':5484, ' in':303, ' the':279, ' same':1788, ' minute':9104, ',':11, ' and':321, ' none':6643, ' of':314, ' them':1070, ' is':369, ' wrong':4808, '.':13, ' What':3437, ' is':369, ' wrong':4808, ' is':369, ' quoting':54624, ' one':799, ' of':314, ' them':1070, ' without':1973, ' saying':5315, ' which':864, ' one':799, ' it':424, ' is':369, '.':13, ' Passage':95072, ' ':220, '1':16, '1':16, '.':13, ' A':357, ' benchmark':27502, ' number':1324, ' without':1973, ' its':1141, ' measurement':18100, ' conditions':4530, ' is':369, ' a':264, ' rumor':55957, ' with':440, ' digits':17955, ' in':303, ' it':424, '.':13, ' Tokens':56212, ' per':791, ' second':2018, ' can':628, ' describe':7276, ' how':1204, ' fast':4778, ' a':264, ' model':1558, ' reads':15339, ' a':264, ' prompt':9640, ',':11, ' how':1204, ' fast':4778, ' it':424, ' writes':13514, ' an':449, ' answer':4087, ',':11, ' or':466, ' how':1204, ' long':1248, ' the':279, ' whole':4220, ' exchange':9013, ' took':3738, ' including':2583, ' loading':8019, ' the':279, ' weights':13914, ' from':494, ' disk':12977, '.':13, ' These':4081, ' three':2250, ' rates':7566, ' differ':1684, ' by':539, ' an':449, ' order':1906, ' of':314, ' magnitude':24806, ' on':383, ' the':279, ' same':1788, ' machine':5484, ' in':303, ' the':279, ' same':1788, ' minute':9104, ',':11, ' and':321, ' none':6643, ' of':314, ' them':1070, ' is':369, ' wrong':4808, '.':13, ' What':3437, ' is':369, ' wrong':4808, ' is':369, ' quoting':54624, ' one':799, ' of':314, ' them':1070, ' without':1973, ' saying':5315, ' which':864, ' one':799, ' it':424, ' is':369, '.':13, ' Passage':95072, ' ':220, '1':16, '2':17, '.':13, ' A':357, ' benchmark':27502, ' number':1324, ' without':1973, ' its':1141, ' measurement':18100, ' conditions':4530, ' is':369, ' a':264, ' rumor':55957, ' with':440, ' digits':17955, ' in':303, ' it':424, '.':13, ' Tokens':56212, ' per':791, ' second':2018, ' can':628, ' describe':7276, ' how':1204, ' fast':4778, ' a':264, ' model':1558, ' reads':15339, ' a':264, ' prompt':9640, ',':11, ' how':1204, ' fast':4778, ' it':424, ' writes':13514, ' an':449, ' answer':4087, ',':11, ' or':466, ' how':1204, ' long':1248, ' the':279, ' whole':4220, ' exchange':9013, ' took':3738, ' including':2583, ' loading':8019, ' the':279, ' weights':13914, ' from':494, ' disk':12977, '.':13, ' These':4081, ' three':2250, ' rates':7566, ' differ':1684, ' by':539, ' an':449, ' order':1906, ' of':314, ' magnitude':24806, ' on':383, ' the':279, ' same':1788, ' machine':5484, ' in':303, ' the':279, ' same':1788, ' minute':9104, ',':11, ' and':321, ' none':6643, ' of':314, ' them':1070, ' is':369, ' wrong':4808, '.':13, ' What':3437, ' is':369, ' wrong':4808, ' is':369, ' quoting':54624, ' one':799, ' of':314, ' them':1070, ' without':1973, ' saying':5315, ' which':864, ' one':799, ' it':424, ' is':369, '.':13, ' Passage':95072, ' ':220, '1':16, '3':18, '.':13, ' A':357, ' benchmark':27502, ' number':1324, ' without':1973, ' its':1141, ' measurement':18100, ' conditions':4530, ' is':369, ' a':264, ' rumor':55957, ' with':440, ' digits':17955, ' in':303, ' it':424, '.':13, ' Tokens':56212, ' per':791, ' second':2018, ' can':628, ' describe':7276, ' how':1204, ' fast':4778, ' a':264, ' model':1558, ' reads':15339, ' a':264, ' prompt':9640, ',':11, ' how':1204, ' fast':4778, ' it':424, ' writes':13514, ' an':449, ' answer':4087, ',':11, ' or':466, ' how':1204, ' long':1248, ' the':279, ' whole':4220, ' exchange':9013, ' took':3738, ' including':2583, ' loading':8019, ' the':279, ' weights':13914, ' from':494, ' disk':12977, '.':13, ' These':4081, ' three':2250, ' rates':7566, ' differ':1684, ' by':539, ' an':449, ' order':1906, ' of':314, ' magnitude':24806, ' on':383, ' the':279, ' same':1788, ' machine':5484, ' in':303, ' the':279, ' same':1788, ' minute':9104, ',':11, ' and':321, ' none':6643, ' of':314, ' them':1070, ' is':369, ' wrong':4808, '.':13, ' What':3437, ' is':369, ' wrong':4808, ' is':369, ' quoting':54624, ' one':799, ' of':314, ' them':1070, ' without':1973, ' saying':5315, ' which':864, ' one':799, ' it':424, ' is':369, '.':13, ' Passage':95072, ' ':220, '1':16, '4':19, '.':13, ' A':357, ' benchmark':27502, ' number':1324, ' without':1973, ' its':1141, ' measurement':18100, ' conditions':4530, ' is':369, ' a':264, ' rumor':55957, ' with':440, ' digits':17955, ' in':303, ' it':424, '.':13, ' Tokens':56212, ' per':791, ' second':2018, ' can':628, ' describe':7276, ' how':1204, ' fast':4778, ' a':264, ' model':1558, ' reads':15339, ' a':264, ' prompt':9640, ',':11, ' how':1204, ' fast':4778, ' it':424, ' writes':13514, ' an':449, ' answer':4087, ',':11, ' or':466, ' how':1204, ' long':1248, ' the':279, ' whole':4220, ' exchange':9013, ' took':3738, ' including':2583, ' loading':8019, ' the':279, ' weights':13914, ' from':494, ' disk':12977, '.':13, ' These':4081, ' three':2250, ' rates':7566, ' differ':1684, ' by':539, ' an':449, ' order':1906, ' of':314, ' magnitude':24806, ' on':383, ' the':279, ' same':1788, ' machine':5484, ' in':303, ' the':279, ' same':1788, ' minute':9104, ',':11, ' and':321, ' none':6643, ' of':314, ' them':1070, ' is':369, ' wrong':4808, '.':13, ' What':3437, ' is':369, ' wrong':4808, ' is':369, ' quoting':54624, ' one':799, ' of':314, ' them':1070, ' without':1973, ' saying':5315, ' which':864, ' one':799, ' it':424, ' is':369, '.':13, ' Passage':95072, ' ':220, '1':16, '5':20, '.':13, ' A':357, ' benchmark':27502, ' number':1324, ' without':1973, ' its':1141, ' measurement':18100, ' conditions':4530, ' is':369, ' a':264, ' rumor':55957, ' with':440, ' digits':17955, ' in':303, ' it':424, '.':13, ' Tokens':56212, ' per':791, ' second':2018, ' can':628, ' describe':7276, ' how':1204, ' fast':4778, ' a':264, ' model':1558, ' reads':15339, ' a':264, ' prompt':9640, ',':11, ' how':1204, ' fast':4778, ' it':424, ' writes':13514, ' an':449, ' answer':4087, ',':11, ' or':466, ' how':1204, ' long':1248, ' the':279, ' whole':4220, ' exchange':9013, ' took':3738, ' including':2583, ' loading':8019, ' the':279, ' weights':13914, ' from':494, ' disk':12977, '.':13, ' These':4081, ' three':2250, ' rates':7566, ' differ':1684, ' by':539, ' an':449, ' order':1906, ' of':314, ' magnitude':24806, ' on':383, ' the':279, ' same':1788, ' machine':5484, ' in':303, ' the':279, ' same':1788, ' minute':9104, ',':11, ' and':321, ' none':6643, ' of':314, ' them':1070, ' is':369, ' wrong':4808, '.':13, ' What':3437, ' is':369, ' wrong':4808, ' is':369, ' quoting':54624, ' one':799, ' of':314, ' them':1070, ' without':1973, ' saying':5315, ' which':864, ' one':799, ' it':424, ' is':369, '.':13, ' Passage':95072, ' ':220, '1':16, '6':21, '.':13, ' A':357, ' benchmark':27502, ' number':1324, ' without':1973, ' its':1141, ' measurement':18100, ' conditions':4530, ' is':369, ' a':264, ' rumor':55957, ' with':440, ' digits':17955, ' in':303, ' it':424, '.':13, ' Tokens':56212, ' per':791, ' second':2018, ' can':628, ' describe':7276, ' how':1204, ' fast':4778, ' a':264, ' model':1558, ' reads':15339, ' a':264, ' prompt':9640, ',':11, ' how':1204, ' fast':4778, ' it':424, ' writes':13514, ' an':449, ' answer':4087, ',':11, ' or':466, ' how':1204, ' long':1248, ' the':279, ' whole':4220, ' exchange':9013, ' took':3738, ' including':2583, ' loading':8019, ' the':279, ' weights':13914, ' from':494, ' disk':12977, '.':13, ' These':4081, ' three':2250, ' rates':7566, ' differ':1684, ' by':539, ' an':449, ' order':1906, ' of':314, ' magnitude':24806, ' on':383, ' the':279, ' same':1788, ' machine':5484, ' in':303, ' the':279, ' same':1788, ' minute':9104, ',':11, ' and':321, ' none':6643, ' of':314, ' them':1070, ' is':369, ' wrong':4808, '.':13, ' What':3437, ' is':369, ' wrong':4808, ' is':369, ' quoting':54624, ' one':799, ' of':314, ' them':1070, ' without':1973, ' saying':5315, ' which':864, ' one':799, ' it':424, ' is':369, '.':13, ' Passage':95072, ' ':220, '1':16, '7':22, '.':13, ' A':357, ' benchmark':27502, ' number':1324, ' without':1973, ' its':1141, ' measurement':18100, ' conditions':4530, ' is':369, ' a':264, ' rumor':55957, ' with':440, ' digits':17955, ' in':303, ' it':424, '.':13, ' Tokens':56212, ' per':791, ' second':2018, ' can':628, ' describe':7276, ' how':1204, ' fast':4778, ' a':264, ' model':1558, ' reads':15339, ' a':264, ' prompt':9640, ',':11, ' how':1204, ' fast':4778, ' it':424, ' writes':13514, ' an':449, ' answer':4087, ',':11, ' or':466, ' how':1204, ' long':1248, ' the':279, ' whole':4220, ' exchange':9013, ' took':3738, ' including':2583, ' loading':8019, ' the':279, ' weights':13914, ' from':494, ' disk':12977, '.':13, ' These':4081, ' three':2250, ' rates':7566, ' differ':1684, ' by':539, ' an':449, ' order':1906, ' of':314, ' magnitude':24806, ' on':383, ' the':279, ' same':1788, ' machine':5484, ' in':303, ' the':279, ' same':1788, ' minute':9104, ',':11, ' and':321, ' none':6643, ' of':314, ' them':1070, ' is':369, ' wrong':4808, '.':13, ' What':3437, ' is':369, ' wrong':4808, ' is':369, ' quoting':54624, ' one':799, ' of':314, ' them':1070, ' without':1973, ' saying':5315, ' which':864, ' one':799, ' it':424, ' is':369, '.':13, ' Passage':95072, ' ':220, '1':16, '8':23, '.':13, ' A':357, ' benchmark':27502, ' number':1324, ' without':1973, ' its':1141, ' measurement':18100, ' conditions':4530, ' is':369, ' a':264, ' rumor':55957, ' with':440, ' digits':17955, ' in':303, ' it':424, '.':13, ' Tokens':56212, ' per':791, ' second':2018, ' can':628, ' describe':7276, ' how':1204, ' fast':4778, ' a':264, ' model':1558, ' reads':15339, ' a':264, ' prompt':9640, ',':11, ' how':1204, ' fast':4778, ' it':424, ' writes':13514, ' an':449, ' answer':4087, ',':11, ' or':466, ' how':1204, ' long':1248, ' the':279, ' whole':4220, ' exchange':9013, ' took':3738, ' including':2583, ' loading':8019, ' the':279, ' weights':13914, ' from':494, ' disk':12977, '.':13, ' These':4081, ' three':2250, ' rates':7566, ' differ':1684, ' by':539, ' an':449, ' order':1906, ' of':314, ' magnitude':24806, ' on':383, ' the':279, ' same':1788, ' machine':5484, ' in':303, ' the':279, ' same':1788, ' minute':9104, ',':11, ' and':321, ' none':6643, ' of':314, ' them':1070, ' is':369, ' wrong':4808, '.':13, ' What':3437, ' is':369, ' wrong':4808, ' is':369, ' quoting':54624, ' one':799, ' of':314, ' them':1070, ' without':1973, ' saying':5315, ' which':864, ' one':799, ' it':424, ' is':369, '.':13, ' Passage':95072, ' ':220, '1':16, '9':24, '.':13, ' A':357, ' benchmark':27502, ' number':1324, ' without':1973, ' its':1141, ' measurement':18100, ' conditions':4530, ' is':369, ' a':264, ' rumor':55957, ' with':440, ' digits':17955, ' in':303, ' it':424, '.':13, ' Tokens':56212, ' per':791, ' second':2018, ' can':628, ' describe':7276, ' how':1204, ' fast':4778, ' a':264, ' model':1558, ' reads':15339, ' a':264, ' prompt':9640, ',':11, ' how':1204, ' fast':4778, ' it':424, ' writes':13514, ' an':449, ' answer':4087, ',':11, ' or':466, ' how':1204, ' long':1248, ' the':279, ' whole':4220, ' exchange':9013, ' took':3738, ' including':2583, ' loading':8019, ' the':279, ' weights':13914, ' from':494, ' disk':12977, '.':13, ' These':4081, ' three':2250, ' rates':7566, ' differ':1684, ' by':539, ' an':449, ' order':1906, ' of':314, ' magnitude':24806, ' on':383, ' the':279, ' same':1788, ' machine':5484, ' in':303, ' the':279, ' same':1788, ' minute':9104, ',':11, ' and':321, ' none':6643, ' of':314, ' them':1070, ' is':369, ' wrong':4808, '.':13, ' What':3437, ' is':369, ' wrong':4808, ' is':369, ' quoting':54624, ' one':799, ' of':314, ' them':1070, ' without':1973, ' saying':5315, ' which':864, ' one':799, ' it':424, ' is':369, '.':13, ' Passage':95072, ' ':220, '2':17, '0':15, '.':13, ' A':357, ' benchmark':27502, ' number':1324, ' without':1973, ' its':1141, ' measurement':18100, ' conditions':4530, ' is':369, ' a':264, ' rumor':55957, ' with':440, ' digits':17955, ' in':303, ' it':424, '.':13, ' Tokens':56212, ' per':791, ' second':2018, ' can':628, ' describe':7276, ' how':1204, ' fast':4778, ' a':264, ' model':1558, ' reads':15339, ' a':264, ' prompt':9640, ',':11, ' how':1204, ' fast':4778, ' it':424, ' writes':13514, ' an':449, ' answer':4087, ',':11, ' or':466, ' how':1204, ' long':1248, ' the':279, ' whole':4220, ' exchange':9013, ' took':3738, ' including':2583, ' loading':8019, ' the':279, ' weights':13914, ' from':494, ' disk':12977, '.':13, ' These':4081, ' three':2250, ' rates':7566, ' differ':1684, ' by':539, ' an':449, ' order':1906, ' of':314, ' magnitude':24806, ' on':383, ' the':279, ' same':1788, ' machine':5484, ' in':303, ' the':279, ' same':1788, ' minute':9104, ',':11, ' and':321, ' none':6643, ' of':314, ' them':1070, ' is':369, ' wrong':4808, '.':13, ' What':3437, ' is':369, ' wrong':4808, ' is':369, ' quoting':54624, ' one':799, ' of':314, ' them':1070, ' without':1973, ' saying':5315, ' which':864, ' one':799, ' it':424, ' is':369, '.':13, ' Passage':95072, ' ':220, '2':17, '1':16, '.':13, ' A':357, ' benchmark':27502, ' number':1324, ' without':1973, ' its':1141, ' measurement':18100, ' conditions':4530, ' is':369, ' a':264, ' rumor':55957, ' with':440, ' digits':17955, ' in':303, ' it':424, '.':13, ' Tokens':56212, ' per':791, ' second':2018, ' can':628, ' describe':7276, ' how':1204, ' fast':4778, ' a':264, ' model':1558, ' reads':15339, ' a':264, ' prompt':9640, ',':11, ' how':1204, ' fast':4778, ' it':424, ' writes':13514, ' an':449, ' answer':4087, ',':11, ' or':466, ' how':1204, ' long':1248, ' the':279, ' whole':4220, ' exchange':9013, ' took':3738, ' including':2583, ' loading':8019, ' the':279, ' weights':13914, ' from':494, ' disk':12977, '.':13, ' These':4081, ' three':2250, ' rates':7566, ' differ':1684, ' by':539, ' an':449, ' order':1906, ' of':314, ' magnitude':24806, ' on':383, ' the':279, ' same':1788, ' machine':5484, ' in':303, ' the':279, ' same':1788, ' minute':9104, ',':11, ' and':321, ' none':6643, ' of':314, ' them':1070, ' is':369, ' wrong':4808, '.':13, ' What':3437, ' is':369, ' wrong':4808, ' is':369, ' quoting':54624, ' one':799, ' of':314, ' them':1070, ' without':1973, ' saying':5315, ' which':864, ' one':799, ' it':424, ' is':369, '.':13, ' Passage':95072, ' ':220, '2':17, '2':17, '.':13, ' A':357, ' benchmark':27502, ' number':1324, ' without':1973, ' its':1141, ' measurement':18100, ' conditions':4530, ' is':369, ' a':264, ' rumor':55957, ' with':440, ' digits':17955, ' in':303, ' it':424, '.':13, ' Tokens':56212, ' per':791, ' second':2018, ' can':628, ' describe':7276, ' how':1204, ' fast':4778, ' a':264, ' model':1558, ' reads':15339, ' a':264, ' prompt':9640, ',':11, ' how':1204, ' fast':4778, ' it':424, ' writes':13514, ' an':449, ' answer':4087, ',':11, ' or':466, ' how':1204, ' long':1248, ' the':279, ' whole':4220, ' exchange':9013, ' took':3738, ' including':2583, ' loading':8019, ' the':279, ' weights':13914, ' from':494, ' disk':12977, '.':13, ' These':4081, ' three':2250, ' rates':7566, ' differ':1684, ' by':539, ' an':449, ' order':1906, ' of':314, ' magnitude':24806, ' on':383, ' the':279, ' same':1788, ' machine':5484, ' in':303, ' the':279, ' same':1788, ' minute':9104, ',':11, ' and':321, ' none':6643, ' of':314, ' them':1070, ' is':369, ' wrong':4808, '.':13, ' What':3437, ' is':369, ' wrong':4808, ' is':369, ' quoting':54624, ' one':799, ' of':314, ' them':1070, ' without':1973, ' saying':5315, ' which':864, ' one':799, ' it':424, ' is':369, '.':13, ' Passage':95072, ' ':220, '2':17, '3':18, '.':13, ' A':357, ' benchmark':27502, ' number':1324, ' without':1973, ' its':1141, ' measurement':18100, ' conditions':4530, ' is':369, ' a':264, ' rumor':55957, ' with':440, ' digits':17955, ' in':303, ' it':424, '.':13, ' Tokens':56212, ' per':791, ' second':2018, ' can':628, ' describe':7276, ' how':1204, ' fast':4778, ' a':264, ' model':1558, ' reads':15339, ' a':264, ' prompt':9640, ',':11, ' how':1204, ' fast':4778, ' it':424, ' writes':13514, ' an':449, ' answer':4087, ',':11, ' or':466, ' how':1204, ' long':1248, ' the':279, ' whole':4220, ' exchange':9013, ' took':3738, ' including':2583, ' loading':8019, ' the':279, ' weights':13914, ' from':494, ' disk':12977, '.':13, ' These':4081, ' three':2250, ' rates':7566, ' differ':1684, ' by':539, ' an':449, ' order':1906, ' of':314, ' magnitude':24806, ' on':383, ' the':279, ' same':1788, ' machine':5484, ' in':303, ' the':279, ' same':1788, ' minute':9104, ',':11, ' and':321, ' none':6643, ' of':314, ' them':1070, ' is':369, ' wrong':4808, '.':13, ' What':3437, ' is':369, ' wrong':4808, ' is':369, ' quoting':54624, ' one':799, ' of':314, ' them':1070, ' without':1973, ' saying':5315, ' which':864, ' one':799, ' it':424, ' is':369, '.':13, ' Passage':95072, ' ':220, '2':17, '4':19, '.':13, ' A':357, ' benchmark':27502, ' number':1324, ' without':1973, ' its':1141, ' measurement':18100, ' conditions':4530, ' is':369, ' a':264, ' rumor':55957, ' with':440, ' digits':17955, ' in':303, ' it':424, '.':13, ' Tokens':56212, ' per':791, ' second':2018, ' can':628, ' describe':7276, ' how':1204, ' fast':4778, ' a':264, ' model':1558, ' reads':15339, ' a':264, ' prompt':9640, ',':11, ' how':1204, ' fast':4778, ' it':424, ' writes':13514, ' an':449, ' answer':4087, ',':11, ' or':466, ' how':1204, ' long':1248, ' the':279, ' whole':4220, ' exchange':9013, ' took':3738, ' including':2583, ' loading':8019, ' the':279, ' weights':13914, ' from':494, ' disk':12977, '.':13, ' These':4081, ' three':2250, ' rates':7566, ' differ':1684, ' by':539, ' an':449, ' order':1906, ' of':314, ' magnitude':24806, ' on':383, ' the':279, ' same':1788, ' machine':5484, ' in':303, ' the':279, ' same':1788, ' minute':9104, ',':11, ' and':321, ' none':6643, ' of':314, ' them':1070, ' is':369, ' wrong':4808, '.':13, ' What':3437, ' is':369, ' wrong':4808, ' is':369, ' quoting':54624, ' one':799, ' of':314, ' them':1070, ' without':1973, ' saying':5315, ' which':864, ' one':799, ' it':424, ' is':369, '.':13, ' Passage':95072, ' ':220, '2':17, '5':20, '.':13, ' A':357, ' benchmark':27502, ' number':1324, ' without':1973, ' its':1141, ' measurement':18100, ' conditions':4530, ' is':369, ' a':264, ' rumor':55957, ' with':440, ' digits':17955, ' in':303, ' it':424, '.':13, ' Tokens':56212, ' per':791, ' second':2018, ' can':628, ' describe':7276, ' how':1204, ' fast':4778, ' a':264, ' model':1558, ' reads':15339, ' a':264, ' prompt':9640, ',':11, ' how':1204, ' fast':4778, ' it':424, ' writes':13514, ' an':449, ' answer':4087, ',':11, ' or':466, ' how':1204, ' long':1248, ' the':279, ' whole':4220, ' exchange':9013, ' took':3738, ' including':2583, ' loading':8019, ' the':279, ' weights':13914, ' from':494, ' disk':12977, '.':13, ' These':4081, ' three':2250, ' rates':7566, ' differ':1684, ' by':539, ' an':449, ' order':1906, ' of':314, ' magnitude':24806, ' on':383, ' the':279, ' same':1788, ' machine':5484, ' in':303, ' the':279, ' same':1788, ' minute':9104, ',':11, ' and':321, ' none':6643, ' of':314, ' them':1070, ' is':369, ' wrong':4808, '.':13, ' What':3437, ' is':369, ' wrong':4808, ' is':369, ' quoting':54624, ' one':799, ' of':314, ' them':1070, ' without':1973, ' saying':5315, ' which':864, ' one':799, ' it':424, ' is':369, '.':13, ' Passage':95072, ' ':220, '2':17, '6':21, '.':13, ' A':357, ' benchmark':27502, ' number':1324, ' without':1973, ' its':1141, ' measurement':18100, ' conditions':4530, ' is':369, ' a':264, ' rumor':55957, ' with':440, ' digits':17955, ' in':303, ' it':424, '.':13, ' Tokens':56212, ' per':791, ' second':2018, ' can':628, ' describe':7276, ' how':1204, ' fast':4778, ' a':264, ' model':1558, ' reads':15339, ' a':264, ' prompt':9640, ',':11, ' how':1204, ' fast':4778, ' it':424, ' writes':13514, ' an':449, ' answer':4087, ',':11, ' or':466, ' how':1204, ' long':1248, ' the':279, ' whole':4220, ' exchange':9013, ' took':3738, ' including':2583, ' loading':8019, ' the':279, ' weights':13914, ' from':494, ' disk':12977, '.':13, ' These':4081, ' three':2250, ' rates':7566, ' differ':1684, ' by':539, ' an':449, ' order':1906, ' of':314, ' magnitude':24806, ' on':383, ' the':279, ' same':1788, ' machine':5484, ' in':303, ' the':279, ' same':1788, ' minute':9104, ',':11, ' and':321, ' none':6643, ' of':314, ' them':1070, ' is':369, ' wrong':4808, '.':13, ' What':3437, ' is':369, ' wrong':4808, ' is':369, ' quoting':54624, ' one':799, ' of':314, ' them':1070, ' without':1973, ' saying':5315, ' which':864, ' one':799, ' it':424, ' is':369, '.':13, ' Passage':95072, ' ':220, '2':17, '7':22, '.':13, ' A':357, ' benchmark':27502, ' number':1324, ' without':1973, ' its':1141, ' measurement':18100, ' conditions':4530, ' is':369, ' a':264, ' rumor':55957, ' with':440, ' digits':17955, ' in':303, ' it':424, '.':13, ' Tokens':56212, ' per':791, ' second':2018, ' can':628, ' describe':7276, ' how':1204, ' fast':4778, ' a':264, ' model':1558, ' reads':15339, ' a':264, ' prompt':9640, ',':11, ' how':1204, ' fast':4778, ' it':424, ' writes':13514, ' an':449, ' answer':4087, ',':11, ' or':466, ' how':1204, ' long':1248, ' the':279, ' whole':4220, ' exchange':9013, ' took':3738, ' including':2583, ' loading':8019, ' the':279, ' weights':13914, ' from':494, ' disk':12977, '.':13, ' These':4081, ' three':2250, ' rates':7566, ' differ':1684, ' by':539, ' an':449, ' order':1906, ' of':314, ' magnitude':24806, ' on':383, ' the':279, ' same':1788, ' machine':5484, ' in':303, ' the':279, ' same':1788, ' minute':9104, ',':11, ' and':321, ' none':6643, ' of':314, ' them':1070, ' is':369, ' wrong':4808, '.':13, ' What':3437, ' is':369, ' wrong':4808, ' is':369, ' quoting':54624, ' one':799, ' of':314, ' them':1070, ' without':1973, ' saying':5315, ' which':864, ' one':799, ' it':424, ' is':369, '.':13, ' ':220 ]
+0.00.812.177 I sampler seed: 7
+0.00.812.187 I sampler params: 
+	repeat_last_n = 64, repeat_penalty = 1.000, frequency_penalty = 0.000, presence_penalty = 0.000
+	dry_multiplier = 0.000, dry_base = 1.750, dry_allowed_length = 2, dry_penalty_last_n = -1
+	top_k = 40, top_p = 0.950, min_p = 0.050, xtc_probability = 0.000, xtc_threshold = 0.100, typical_p = 1.000, top_n_sigma = -1.000, temp = 0.800
+	mirostat = 0, mirostat_lr = 0.100, mirostat_ent = 5.000, adaptive_target = -1.000, adaptive_decay = 0.900
+0.00.812.192 I sampler chain: logits -> logit-bias -> ?penalties -> ?dry -> ?top-n-sigma -> top-k -> ?typical -> top-p -> min-p -> ?xtc -> temp-ext -> dist 
+0.00.812.192 I generate: n_ctx = 4096, n_batch = 2048, n_predict = 128, n_keep = 0
+0.00.812.192 I 
+0.00.812.193 D embd_inp.size(): 2531, n_consumed: 0
+0.00.816.278 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_mul_mm_q5_K_f32', name = 'kernel_mul_mm_q5_K_f32_bci=0_bco=0_ne12=1_ne13=1_r2=1_r3=1'
+0.00.816.415 D ggml_metal_library_compile_pipeline: loaded kernel_mul_mm_q5_K_f32_bci=0_bco=0_ne12=1_ne13=1_r2=1_r3=1      0xaa58e1180 | th_max = 1024 | th_width =   32
+0.00.816.427 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_mul_mm_q8_0_f32', name = 'kernel_mul_mm_q8_0_f32_bci=0_bco=1_ne12=1_ne13=1_r2=1_r3=1'
+0.00.816.484 D ggml_metal_library_compile_pipeline: loaded kernel_mul_mm_q8_0_f32_bci=0_bco=1_ne12=1_ne13=1_r2=1_r3=1      0xaa58e1500 | th_max = 1024 | th_width =   32
+0.00.816.495 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_ssm_conv_f32_f32_batched_4', name = 'kernel_ssm_conv_f32_f32_batched_4_ssm_conv_bs=256'
+0.00.816.534 D ggml_metal_library_compile_pipeline: loaded kernel_ssm_conv_f32_f32_batched_4_ssm_conv_bs=256      0xaa58e1880 | th_max = 1024 | th_width =   32
+0.00.816.544 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_unary_f32_f32_4', name = 'kernel_unary_f32_f32_4_op=106_cnt=0'
+0.00.816.581 D ggml_metal_library_compile_pipeline: loaded kernel_unary_f32_f32_4_op=106_cnt=0           0xaa58e1c00 | th_max = 1024 | th_width =   32
+0.00.816.590 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_mul_mm_q4_K_f32', name = 'kernel_mul_mm_q4_K_f32_bci=0_bco=0_ne12=1_ne13=1_r2=1_r3=1'
+0.00.816.635 D ggml_metal_library_compile_pipeline: loaded kernel_mul_mm_q4_K_f32_bci=0_bco=0_ne12=1_ne13=1_r2=1_r3=1      0xaa58e1f80 | th_max = 1024 | th_width =   32
+0.00.816.657 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_mul_mm_q6_K_f32', name = 'kernel_mul_mm_q6_K_f32_bci=0_bco=0_ne12=1_ne13=1_r2=1_r3=1'
+0.00.816.703 D ggml_metal_library_compile_pipeline: loaded kernel_mul_mm_q6_K_f32_bci=0_bco=0_ne12=1_ne13=1_r2=1_r3=1      0xaa58e2300 | th_max = 1024 | th_width =   32
+0.00.816.789 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_flash_attn_ext_blk', name = 'kernel_flash_attn_ext_blk_nqptg=8_ncpsg=64'
+0.00.816.822 D ggml_metal_library_compile_pipeline: loaded kernel_flash_attn_ext_blk_nqptg=8_ncpsg=64      0xaa58e2a00 | th_max = 1024 | th_width =   32
+0.00.816.827 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_flash_attn_ext_f16_dk256_dv256', name = 'kernel_flash_attn_ext_f16_dk256_dv256_mask=1_sinks=0_bias=0_scap=0_kvpad=0_bcm=0_ns10=1024_ns20=1024_nsg=4'
+0.00.816.890 D ggml_metal_library_compile_pipeline: loaded kernel_flash_attn_ext_f16_dk256_dv256_mask=1_sinks=0_bias=0_scap=0_kvpad=0_bcm=0_ns10=1024_ns20=1024_nsg=4      0xaa58e2d80 | th_max = 1024 | th_width =   32
+0.00.816.896 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_unary_f32_f32_4', name = 'kernel_unary_f32_f32_4_op=102_cnt=0'
+0.00.816.931 D ggml_metal_library_compile_pipeline: loaded kernel_unary_f32_f32_4_op=102_cnt=0           0xaa58e3100 | th_max = 1024 | th_width =   32
+0.03.491.415 D n_past = 2048
+0.03.491.417 D embd_inp.size(): 2531, n_consumed: 2048
+0.04.403.035 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_mul_mm_q5_K_f32', name = 'kernel_mul_mm_q5_K_f32_bci=0_bco=1_ne12=1_ne13=1_r2=1_r3=1'
+0.04.403.177 D ggml_metal_library_compile_pipeline: loaded kernel_mul_mm_q5_K_f32_bci=0_bco=1_ne12=1_ne13=1_r2=1_r3=1      0xaa58e0e00 | th_max = 1024 | th_width =   32
+0.04.403.203 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_mul_mm_q4_K_f32', name = 'kernel_mul_mm_q4_K_f32_bci=0_bco=1_ne12=1_ne13=1_r2=1_r3=1'
+0.04.403.263 D ggml_metal_library_compile_pipeline: loaded kernel_mul_mm_q4_K_f32_bci=0_bco=1_ne12=1_ne13=1_r2=1_r3=1      0xaa58e3800 | th_max = 1024 | th_width =   32
+0.04.403.282 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_mul_mm_q6_K_f32', name = 'kernel_mul_mm_q6_K_f32_bci=0_bco=1_ne12=1_ne13=1_r2=1_r3=1'
+0.04.403.324 D ggml_metal_library_compile_pipeline: loaded kernel_mul_mm_q6_K_f32_bci=0_bco=1_ne12=1_ne13=1_r2=1_r3=1      0xaa58e3b80 | th_max = 1024 | th_width =   32
+0.04.403.413 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_flash_attn_ext_f16_dk256_dv256', name = 'kernel_flash_attn_ext_f16_dk256_dv256_mask=1_sinks=0_bias=0_scap=0_kvpad=0_bcm=1_ns10=1024_ns20=1024_nsg=4'
+0.04.403.472 D ggml_metal_library_compile_pipeline: loaded kernel_flash_attn_ext_f16_dk256_dv256_mask=1_sinks=0_bias=0_scap=0_kvpad=0_bcm=1_ns10=1024_ns20=1024_nsg=4      0xaa58e2680 | th_max = 1024 | th_width =   32
+0.04.404.072 D n_past = 2531
+0.05.340.743 D n_remain: 127
+0.05.341.912 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_mul_mv_q8_0_f32', name = 'kernel_mul_mv_q8_0_f32_nsg=4_ne12=1_r2=1_r3=1'
+0.05.342.054 D ggml_metal_library_compile_pipeline: loaded kernel_mul_mv_q8_0_f32_nsg=4_ne12=1_r2=1_r3=1      0xaa5970380 | th_max = 1024 | th_width =   32
+0.05.342.062 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_ssm_conv_f32_f32_4', name = 'kernel_ssm_conv_f32_f32_4'
+0.05.342.097 D ggml_metal_library_compile_pipeline: loaded kernel_ssm_conv_f32_f32_4                     0xaa5970700 | th_max = 1024 | th_width =   32
+0.05.342.208 D ggml_metal_library_compile_pipeline: compiling pipeline: base = 'kernel_flash_attn_ext_vec_f16_dk256_dv256', name = 'kernel_flash_attn_ext_vec_f16_dk256_dv256_mask=1_sink=0_bias=0_scap=0_kvpad=0_ns10=1024_ns20=1024_nsg=2_nwg=32'
+0.05.342.295 D ggml_metal_library_compile_pipeline: loaded kernel_flash_attn_ext_vec_f16_dk256_dv256_mask=1_sink=0_bias=0_scap=0_kvpad=0_ns10=1024_ns20=1024_nsg=2_nwg=32      0xaa5970e00 | th_max = 1024 | th_width =   32
+0.05.342.953 D n_past = 2532
+0.05.391.764 D n_remain: 126
+0.05.392.579 D n_past = 2533
+0.05.440.540 D n_remain: 125
+0.05.441.291 D n_past = 2534
+0.05.490.637 D n_remain: 124
+0.05.491.435 D n_past = 2535
+0.05.539.303 D n_remain: 123
+0.05.540.083 D n_past = 2536
+0.05.588.054 D n_remain: 122
+0.05.588.771 D n_past = 2537
+0.05.636.764 D n_remain: 121
+0.05.637.527 D n_past = 2538
+0.05.685.680 D n_remain: 120
+0.05.686.411 D n_past = 2539
+0.05.734.581 D n_remain: 119
+0.05.735.353 D n_past = 2540
+0.05.783.832 D n_remain: 118
+0.05.784.552 D n_past = 2541
+0.05.832.658 D n_remain: 117
+0.05.833.378 D n_past = 2542
+0.05.881.391 D n_remain: 116
+0.05.882.110 D n_past = 2543
+0.05.929.896 D n_remain: 115
+0.05.930.583 D n_past = 2544
+0.05.978.672 D n_remain: 114
+0.05.979.396 D n_past = 2545
+0.06.028.001 D n_remain: 113
+0.06.028.768 D n_past = 2546
+0.06.077.199 D n_remain: 112
+0.06.077.911 D n_past = 2547
+0.06.126.214 D n_remain: 111
+0.06.126.966 D n_past = 2548
+0.06.174.958 D n_remain: 110
+0.06.175.693 D n_past = 2549
+0.06.223.747 D n_remain: 109
+0.06.224.477 D n_past = 2550
+0.06.273.549 D n_remain: 108
+0.06.274.284 D n_past = 2551
+0.06.323.649 D n_remain: 107
+0.06.324.347 D n_past = 2552
+0.06.372.203 D n_remain: 106
+0.06.373.068 D n_past = 2553
+0.06.421.470 D n_remain: 105
+0.06.422.215 D n_past = 2554
+0.06.471.419 D n_remain: 104
+0.06.472.208 D n_past = 2555
+0.06.520.064 D n_remain: 103
+0.06.520.932 D n_past = 2556
+0.06.568.997 D n_remain: 102
+0.06.569.725 D n_past = 2557
+0.06.617.790 D n_remain: 101
+0.06.618.495 D n_past = 2558
+0.06.666.552 D n_remain: 100
+0.06.667.237 D n_past = 2559
+0.06.715.331 D n_remain: 99
+0.06.716.028 D n_past = 2560
+0.06.764.268 D n_remain: 98
+0.06.765.949 D n_past = 2561
+0.06.814.234 D n_remain: 97
+0.06.814.959 D n_past = 2562
+0.06.862.823 D n_remain: 96
+0.06.863.517 D n_past = 2563
+0.06.911.623 D n_remain: 95
+0.06.912.331 D n_past = 2564
+0.06.960.294 D n_remain: 94
+0.06.960.989 D n_past = 2565
+0.07.009.059 D n_remain: 93
+0.07.009.753 D n_past = 2566
+0.07.057.780 D n_remain: 92
+0.07.058.462 D n_past = 2567
+0.07.106.320 D n_remain: 91
+0.07.107.062 D n_past = 2568
+0.07.155.115 D n_remain: 90
+0.07.155.829 D n_past = 2569
+0.07.203.880 D n_remain: 89
+0.07.204.636 D n_past = 2570
+0.07.252.665 D n_remain: 88
+0.07.253.402 D n_past = 2571
+0.07.302.073 D n_remain: 87
+0.07.302.776 D n_past = 2572
+0.07.350.872 D n_remain: 86
+0.07.351.575 D n_past = 2573
+0.07.399.696 D n_remain: 85
+0.07.400.400 D n_past = 2574
+0.07.448.529 D n_remain: 84
+0.07.449.251 D n_past = 2575
+0.07.499.288 D n_remain: 83
+0.07.500.012 D n_past = 2576
+0.07.548.950 D n_remain: 82
+0.07.549.687 D n_past = 2577
+0.07.598.013 D n_remain: 81
+0.07.598.811 D n_past = 2578
+0.07.646.630 D n_remain: 80
+0.07.647.381 D n_past = 2579
+0.07.695.474 D n_remain: 79
+0.07.696.205 D n_past = 2580
+0.07.744.587 D n_remain: 78
+0.07.745.346 D n_past = 2581
+0.07.793.453 D n_remain: 77
+0.07.794.129 D n_past = 2582
+0.07.842.341 D n_remain: 76
+0.07.843.020 D n_past = 2583
+0.07.891.073 D n_remain: 75
+0.07.891.750 D n_past = 2584
+0.07.939.916 D n_remain: 74
+0.07.940.610 D n_past = 2585
+0.07.988.665 D n_remain: 73
+0.07.989.543 D n_past = 2586
+0.08.037.407 D n_remain: 72
+0.08.038.094 D n_past = 2587
+0.08.086.114 D n_remain: 71
+0.08.086.823 D n_past = 2588
+0.08.134.790 D n_remain: 70
+0.08.135.463 D n_past = 2589
+0.08.183.758 D n_remain: 69
+0.08.184.494 D n_past = 2590
+0.08.233.115 D n_remain: 68
+0.08.233.907 D n_past = 2591
+0.08.282.770 D n_remain: 67
+0.08.283.540 D n_past = 2592
+0.08.332.109 D n_remain: 66
+0.08.332.898 D n_past = 2593
+0.08.381.420 D n_remain: 65
+0.08.382.171 D n_past = 2594
+0.08.430.841 D n_remain: 64
+0.08.431.577 D n_past = 2595
+0.08.481.201 D n_remain: 63
+0.08.482.050 D n_past = 2596
+0.08.531.899 D n_remain: 62
+0.08.532.718 D n_past = 2597
+0.08.582.430 D n_remain: 61
+0.08.583.248 D n_past = 2598
+0.08.632.539 D n_remain: 60
+0.08.633.349 D n_past = 2599
+0.08.682.410 D n_remain: 59
+0.08.683.204 D n_past = 2600
+0.08.732.272 D n_remain: 58
+0.08.733.057 D n_past = 2601
+0.08.782.250 D n_remain: 57
+0.08.783.041 D n_past = 2602
+0.08.831.858 D n_remain: 56
+0.08.832.685 D n_past = 2603
+0.08.881.398 D n_remain: 55
+0.08.882.225 D n_past = 2604
+0.08.931.230 D n_remain: 54
+0.08.931.999 D n_past = 2605
+0.08.980.936 D n_remain: 53
+0.08.981.727 D n_past = 2606
+0.09.030.589 D n_remain: 52
+0.09.031.575 D n_past = 2607
+0.09.080.435 D n_remain: 51
+0.09.081.278 D n_past = 2608
+0.09.130.158 D n_remain: 50
+0.09.131.189 D n_past = 2609
+0.09.179.946 D n_remain: 49
+0.09.180.758 D n_past = 2610
+0.09.229.478 D n_remain: 48
+0.09.230.219 D n_past = 2611
+0.09.280.322 D n_remain: 47
+0.09.281.173 D n_past = 2612
+0.09.330.411 D n_remain: 46
+0.09.331.459 D n_past = 2613
+0.09.380.492 D n_remain: 45
+0.09.381.502 D n_past = 2614
+0.09.430.996 D n_remain: 44
+0.09.431.816 D n_past = 2615
+0.09.483.056 D n_remain: 43
+0.09.483.829 D n_past = 2616
+0.09.532.901 D n_remain: 42
+0.09.533.696 D n_past = 2617
+0.09.582.990 D n_remain: 41
+0.09.583.803 D n_past = 2618
+0.09.632.547 D n_remain: 40
+0.09.633.388 D n_past = 2619
+0.09.683.202 D n_remain: 39
+0.09.683.986 D n_past = 2620
+0.09.733.032 D n_remain: 38
+0.09.733.804 D n_past = 2621
+0.09.782.794 D n_remain: 37
+0.09.783.570 D n_past = 2622
+0.09.832.634 D n_remain: 36
+0.09.833.407 D n_past = 2623
+0.09.882.497 D n_remain: 35
+0.09.883.256 D n_past = 2624
+0.09.932.821 D n_remain: 34
+0.09.933.634 D n_past = 2625
+0.09.990.650 D n_remain: 33
+0.09.991.442 D n_past = 2626
+0.10.040.609 D n_remain: 32
+0.10.041.403 D n_past = 2627
+0.10.091.830 D n_remain: 31
+0.10.092.920 D n_past = 2628
+0.10.143.938 D n_remain: 30
+0.10.144.741 D n_past = 2629
+0.10.194.327 D n_remain: 29
+0.10.195.097 D n_past = 2630
+0.10.244.621 D n_remain: 28
+0.10.245.442 D n_past = 2631
+0.10.295.336 D n_remain: 27
+0.10.296.107 D n_past = 2632
+0.10.345.256 D n_remain: 26
+0.10.346.044 D n_past = 2633
+0.10.395.385 D n_remain: 25
+0.10.396.165 D n_past = 2634
+0.10.445.517 D n_remain: 24
+0.10.446.299 D n_past = 2635
+0.10.496.790 D n_remain: 23
+0.10.497.711 D n_past = 2636
+0.10.548.290 D n_remain: 22
+0.10.549.077 D n_past = 2637
+0.10.598.742 D n_remain: 21
+0.10.599.517 D n_past = 2638
+0.10.648.433 D n_remain: 20
+0.10.649.226 D n_past = 2639
+0.10.698.794 D n_remain: 19
+0.10.699.579 D n_past = 2640
+0.10.748.872 D n_remain: 18
+0.10.749.670 D n_past = 2641
+0.10.798.930 D n_remain: 17
+0.10.799.730 D n_past = 2642
+0.10.848.855 D n_remain: 16
+0.10.849.609 D n_past = 2643
+0.10.898.425 D n_remain: 15
+0.10.899.200 D n_past = 2644
+0.10.948.029 D n_remain: 14
+0.10.948.765 D n_past = 2645
+0.10.997.879 D n_remain: 13
+0.10.998.622 D n_past = 2646
+0.11.047.598 D n_remain: 12
+0.11.048.382 D n_past = 2647
+0.11.097.662 D n_remain: 11
+0.11.098.398 D n_past = 2648
+0.11.147.515 D n_remain: 10
+0.11.148.291 D n_past = 2649
+0.11.197.873 D n_remain: 9
+0.11.198.681 D n_past = 2650
+0.11.248.017 D n_remain: 8
+0.11.248.830 D n_past = 2651
+0.11.299.162 D n_remain: 7
+0.11.299.911 D n_past = 2652
+0.11.349.268 D n_remain: 6
+0.11.350.039 D n_past = 2653
+0.11.399.216 D n_remain: 5
+0.11.400.012 D n_past = 2654
+0.11.449.289 D n_remain: 4
+0.11.450.077 D n_past = 2655
+0.11.500.122 D n_remain: 3
+0.11.500.915 D n_past = 2656
+0.11.549.825 D n_remain: 2
+0.11.550.606 D n_past = 2657
+0.11.599.646 D n_remain: 1
+0.11.600.417 D n_past = 2658
+0.11.649.352 D n_remain: 0
+0.11.649.356 I common_perf_print:    sampling time =      30.09 ms
+0.11.649.357 I common_perf_print:    samplers time =      16.94 ms /  2659 tokens
+0.11.649.357 I common_perf_print:        load time =     470.26 ms
+0.11.649.357 I common_perf_print: prompt eval time =    4527.55 ms /  2531 tokens (    1.79 ms per token,   559.02 tokens per second)
+0.11.649.358 I common_perf_print:        eval time =    6277.67 ms /   127 runs   (   49.43 ms per token,    20.23 tokens per second)
+0.11.649.358 I common_perf_print:       total time =   10839.23 ms /  2658 tokens
+0.11.649.358 I common_perf_print: unaccounted time =       3.91 ms /   0.0 %      (total - sampling - prompt eval - eval) / (total)
+0.11.649.360 I common_perf_print:    graphs reused =        125
+0.11.649.370 I common_memory_breakdown_print: | memory breakdown [MiB] | total    free    self   model   context   compute    unaccounted |
+0.11.649.372 I common_memory_breakdown_print: |   - MTL0 (Apple M5)    | 25559 = 19468 + (6090 =  5406 +     178 +     505) +           0 |
+0.11.649.372 I common_memory_breakdown_print: |   - Host               |                   565 =   545 +       0 +      20                |
+0.11.649.405 D ~llama_context:       MTL0 compute buffer size is 505.0176 MiB, matches expectation of 505.0176 MiB
+0.11.649.406 D ~llama_context:        CPU compute buffer size is  20.0196 MiB, matches expectation of  20.0196 MiB
+0.11.649.407 D ~llama_context:        CPU compute buffer size is   0.0000 MiB, matches expectation of   0.0000 MiB
+0.11.649.419 I ggml_metal_free: deallocating

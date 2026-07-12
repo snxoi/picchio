@@ -36,6 +36,9 @@
 #   python3 picchio.py watch --engine ollama
 #                                       (point the OS gpu meter at any
 #                                        running engine; no stderr parse)
+#   python3 picchio.py model.gguf --ctx-sweep
+#                                       (re-measure at 4k/16k/32k context
+#                                        and report the decode decay slope)
 #
 # Needs: python3 (any recent one), plus llama.cpp on PATH or a local ollama.
 # Nothing else. No pip.
@@ -209,13 +212,14 @@ def engine_version(binpath):
     return os.path.basename(binpath)
 
 
-def run_llama_pass(binpath, model, extra_args, log_path=None):
+def run_llama_pass(binpath, model, extra_args, log_path=None,
+                   prompt=BENCH_PROMPT, ctx=CTX):
     base = [
         binpath,
         "-m", model,
-        "-p", BENCH_PROMPT,
+        "-p", prompt,
         "-n", str(N_PREDICT),
-        "-c", str(CTX),
+        "-c", str(ctx),
         "--seed", "7",
         "--ignore-eos",
     ]
@@ -392,13 +396,13 @@ def map_ollama(resp, wall_s, ps):
     return finish_rates(d)
 
 
-def run_ollama_pass(tag, log_path=None):
+def run_ollama_pass(tag, log_path=None, prompt=BENCH_PROMPT, ctx=CTX):
     t0 = time.monotonic()
     resp = ollama_api("/api/generate", {
         "model": tag,
-        "prompt": BENCH_PROMPT,
+        "prompt": prompt,
         "stream": False,
-        "options": {"num_predict": N_PREDICT, "num_ctx": CTX, "seed": 7},
+        "options": {"num_predict": N_PREDICT, "num_ctx": ctx, "seed": 7},
     })
     wall_s = time.monotonic() - t0
     keep_log(log_path, json.dumps(resp, indent=1))
@@ -1910,6 +1914,139 @@ def watch_cli(argv):
     watch(pid, engine, dur)
 
 
+# --------------------------------------------------------------- ctx sweep
+#
+# One tok/s number is measured at one context depth, almost always a
+# short one, and quoted as if it held at any length. It does not: every
+# token decode generates attends to the whole kv cache, so decode slows
+# as the context fills. The sweep re-measures the three lanes at a few
+# ctx depths, each with a prompt long enough to actually fill that depth
+# (a short prompt at -c 32768 fills nothing and would just measure the 4k
+# number again), and reports the decay slope. It answers a question the
+# forums do not: what does your decode rate do at 32k that it did not at
+# 4k.
+
+def resolve_engine(model, bin_):
+    """llama.cpp-vs-ollama resolution shared by measure and sweep: an
+    existing file is llama.cpp, a bare tag is ollama, a missing path is
+    an error (never quietly retried as a tag). Returns (mode, binpath,
+    engine_str, model_name)."""
+    if os.path.isfile(model):
+        binpath = find_binary(bin_)
+        return ("llama.cpp", binpath,
+                "llama.cpp " + engine_version(binpath), os.path.basename(model))
+    if not looks_like_tag(model):
+        sys.exit("picchio: no such file: {}\nRun picchio with no arguments "
+                 "to see the models on this machine.".format(model))
+    ver = ollama_reachable()
+    if not ver:
+        sys.exit("picchio: {!r} looks like an ollama tag, but no ollama "
+                 "answered at {}.\nStart ollama, or give a .gguf path.".format(
+                     model, OLLAMA_HOST))
+    if not ollama_has_model(model):
+        sys.exit("picchio: ollama at {} does not know the model {!r}.".format(
+            OLLAMA_HOST, model))
+    return "ollama", None, "ollama " + ver, model
+
+
+def sweep_prompt(target_tokens):
+    """A prompt long enough to fill about target_tokens of context, so
+    decode is measured at real kv depth. English runs a little over one
+    token per word here, so the paragraph is repeated until the word
+    count crosses the target; the block reports the depth the engine
+    actually reached, not this estimate."""
+    words = len(_PARA.split())
+    reps = max(1, int(target_tokens / (words * 1.25)))
+    return "".join("Passage {}. {}".format(i + 1, _PARA) for i in range(reps))
+
+
+def parse_tiers(spec):
+    tiers = sorted({int(t) for t in spec.split(",")
+                    if t.strip().isdigit() and int(t) > 0})
+    if len(tiers) < 2:
+        sys.exit("picchio: --ctx-sweep needs at least two ctx sizes, "
+                 "e.g. --ctx-sweep 4096,32768")
+    return tiers
+
+
+def ctx_sweep(model, mode, binpath, engine_str, model_name, tiers, passes, lp):
+    """Re-measures the three lanes at each ctx tier, each tier fed a
+    prompt sized to fill it, so decode is read at real kv depth. Returns
+    one row per tier: the depth actually reached and the warm median
+    lanes. The first pass of each tier is the cold one and is dropped
+    from the warm median, exactly as measure mode does it."""
+    rows = []
+    for ctx in tiers:
+        prompt = sweep_prompt(int(ctx * 0.7))  # leave headroom for 128 gen
+        ps = []
+        for i in range(passes):
+            sys.stderr.write("picchio: ctx {} pass {}/{}{} ...\n".format(
+                ctx, i + 1, passes, " (includes cold load)" if i == 0 else ""))
+            if mode == "llama.cpp":
+                p = run_llama_pass(
+                    binpath, model, [],
+                    lp("ctx{}.pass{}.stderr.txt".format(ctx, i + 1)),
+                    prompt=prompt, ctx=ctx)
+            else:
+                p, _ = run_ollama_pass(
+                    model, lp("ctx{}.pass{}.response.json".format(ctx, i + 1)),
+                    prompt=prompt, ctx=ctx)
+            # wall_s is measured by picchio, not in the engine log; persist
+            # it per pass so the sweep table can be replayed like a verdict
+            keep_log(lp("ctx{}.pass{}.meta.json".format(ctx, i + 1)),
+                     json.dumps({"wall_s": p["wall_s"]}, indent=1))
+            ps.append(p)
+        rep = build_rep(ps)
+        rows.append({"ctx": ctx, "depth": rep.get("prompt_tokens"),
+                     "prefill": rep["prefill_toks"],
+                     "decode": rep["decode_toks"],
+                     "wallclock": rep["wallclock_toks"]})
+    keep_log(lp("sweep.meta.json"), json.dumps(
+        {"engine": engine_str, "model_name": model_name, "mode": mode,
+         "tiers": tiers, "passes": passes}, indent=1))
+    return rows
+
+
+def sweep_slope(rows):
+    """The decay sentence: decode from the shallowest to the deepest tier
+    reached, the lane long context actually taxes. None when either end
+    is unmeasured."""
+    lo, hi = rows[0], rows[-1]
+    if not (lo["decode"] and hi["decode"] and lo["depth"] and hi["depth"]):
+        return None
+    drop = (1 - hi["decode"] / lo["decode"]) * 100
+    span = hi["depth"] / lo["depth"]
+    ends = "{} to {} tokens ({:.0f}x deeper): {:.1f} -> {:.1f} tok/s".format(
+        lo["depth"], hi["depth"], span, lo["decode"], hi["decode"])
+    if drop >= 5:
+        return ("decode fell {:.0f}% from {}. Long context is not free; the "
+                "kv cache taxes every token you generate.".format(drop, ends))
+    if drop >= -5:
+        return ("decode held within {:.0f}% from {}. Here weight bandwidth "
+                "dominates and the kv cache barely shows.".format(
+                    abs(drop), ends))
+    return ("decode read {:.0f}% faster from {}: that is measurement noise, "
+            "not a real speedup at depth.".format(-drop, ends))
+
+
+def render_sweep(mach, engine_str, model_name, rows):
+    out = ["ctx sweep  " + ", ".join(x for x in (model_name, engine_str) if x),
+           "{:<15}{:>12}  {:>12}  {:>12}".format(
+               "depth   ctx", "prefill", "decode", "wallclock")]
+    for r in rows:
+        out.append("{:<15}{:>12}  {:>12}  {:>12}".format(
+            "{:>6}  {}".format(r["depth"] if r["depth"] else "?", r["ctx"]),
+            fmt_rate(r["prefill"]), fmt_rate(r["decode"]),
+            fmt_rate(r["wallclock"])))
+    slope = sweep_slope(rows)
+    if slope:
+        out += textwrap.wrap("SLOPE: " + slope, width=WIDTH,
+                             subsequent_indent="  ")
+    out.append("-- picchio v{} ctx-sweep on {}, {} GB, {}".format(
+        VERSION, mach["chip"], mach["ram_gb"] or "?", mach["os"]))
+    return "\n".join(out)
+
+
 # ---------------------------------------------------------------- selftest
 
 def selftest():
@@ -2106,13 +2243,57 @@ def selftest():
         synth_watch([30, 35, 28, 40, 33], int(4.0 * gib), 6.0)), None)
     if sm == "GPU MIXED":
         wa_ok += 1
+    # ctx sweep: the slope sentence is exact on synthetic rows, and the
+    # committed real sweep replays like a verdict block when present
+    sw_ok, sw_all = 0, 2
+
+    def row(ctx, depth, pf, dc, wc):
+        return {"ctx": ctx, "depth": depth, "prefill": pf,
+                "decode": dc, "wallclock": wc}
+
+    decayed = [row(4096, 2800, 560.0, 21.0, 18.0),
+               row(32768, 22000, 320.0, 15.0, 12.0)]
+    if "decode fell 29%" in sweep_slope(decayed) \
+            and "held within" in sweep_slope(
+                [row(4096, 2800, 560.0, 21.0, 18.0),
+                 row(32768, 22000, 500.0, 20.6, 17.0)]):
+        sw_ok += 1
+    swroot = os.path.join(here, "examples", "raw", "ctx-sweep")
+    swtxt = os.path.join(here, "examples", "ctx-sweep.txt")
+    if os.path.exists(os.path.join(swroot, "sweep.meta.json")) \
+            and os.path.exists(swtxt):
+        sm = json.load(open(os.path.join(swroot, "sweep.meta.json")))
+        rows = []
+        for ctx in sm["tiers"]:
+            ps = []
+            for i in range(1, sm["passes"] + 1):
+                base = os.path.join(swroot, "ctx{}.pass{}".format(ctx, i))
+                w = json.load(open(base + ".meta.json"))["wall_s"]
+                if os.path.exists(base + ".stderr.txt"):
+                    ps.append(parse_stderr(open(base + ".stderr.txt").read(), w))
+                elif os.path.exists(base + ".response.json"):
+                    ps.append(map_ollama(json.load(open(base + ".response.json")),
+                                         w, None))
+            if ps:
+                rp = build_rep(ps)
+                rows.append(row(ctx, rp.get("prompt_tokens"),
+                                rp["prefill_toks"], rp["decode_toks"],
+                                rp["wallclock_toks"]))
+        got = render_sweep(machine_info(), sm["engine"],
+                           sm["model_name"], rows).splitlines()
+        want = open(swtxt).read().rstrip().splitlines()
+        if got[:-1] == want[:-1]:  # footer names the replaying machine
+            sw_ok += 1
+    else:
+        sw_all = 1  # no committed sweep yet: only the synthetic check runs
     print("parser fixtures {}/{}, verdict replay {}/{}, compare {}/{}, "
-          "telemetry {}/{}, verify {}/{}, watch {}/{}".format(
-              fx_ok, fx_all, rp_ok, rp_all, cp_ok, cp_all,
-              te_ok, te_all, ve_ok, ve_all, wa_ok, wa_all))
+          "telemetry {}/{}, verify {}/{}, watch {}/{}, sweep {}/{}".format(
+              fx_ok, fx_all, rp_ok, rp_all, cp_ok, cp_all, te_ok, te_all,
+              ve_ok, ve_all, wa_ok, wa_all, sw_ok, sw_all))
     sys.exit(0 if fx_ok == fx_all and rp_ok == rp_all and rp_all
              and cp_ok == cp_all and te_ok == te_all
-             and ve_ok == ve_all and wa_ok == wa_all else 1)
+             and ve_ok == ve_all and wa_ok == wa_all
+             and sw_ok == sw_all else 1)
 
 
 # -------------------------------------------------------------------- main
@@ -2189,6 +2370,11 @@ def main():
             "  point the os gpu meter at a running process or the whole\n"
             "  gpu and report whether the gpu is doing the work, without\n"
             "  parsing any engine's output (works for mlx, lm studio, ...)\n"
+            "\n"
+            "ctx sweep:\n"
+            "  picchio.py model.gguf --ctx-sweep [4096,16384,32768]\n"
+            "  re-measure the three lanes at each context depth, each one\n"
+            "  filled for real, and report how far decode decays with depth\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -2214,6 +2400,11 @@ def main():
     ap.add_argument("--no-telemetry", action="store_true",
                     help="skip the OS-side GPU sampling; the os line then "
                          "says the verdict rests on engine+timing only")
+    ap.add_argument("--ctx-sweep", nargs="?", const="4096,16384,32768",
+                    metavar="LIST", dest="ctx_sweep",
+                    help="re-measure the three lanes at each context size in "
+                         "LIST (default 4096,16384,32768), each filled to "
+                         "real depth, and report the decode decay slope")
     ap.add_argument("--selftest", action="store_true",
                     help="replay examples/raw through the parser and "
                          "diagnosis; verify the committed verdicts reproduce")
@@ -2254,68 +2445,45 @@ def main():
     lp = (lambda name: os.path.join(logdir, name)) if logdir else \
         (lambda name: None)
 
+    mode, binpath, engine_str, model_name = resolve_engine(args.model,
+                                                           args.bin)
+    if mode == "ollama" and args.extra:
+        sys.exit("picchio: passthrough args after -- only work in "
+                 "llama.cpp mode.")
+
+    if args.ctx_sweep is not None:
+        # a separate diagnostic, not an mp1 verdict: it changes the prompt
+        # per tier, so it prints its own block and never touches the cache
+        rows = ctx_sweep(args.model, mode, binpath, engine_str, model_name,
+                         parse_tiers(args.ctx_sweep), max(2, args.passes), lp)
+        print(render_sweep(mach, engine_str, model_name, rows))
+        sys.exit(0)
+
     passes = []
-    sampler = None
-    if os.path.isfile(args.model):
-        mode = "llama.cpp"
-        binpath = find_binary(args.bin)
-        engine_str = "llama.cpp " + engine_version(binpath)
-        model_name = os.path.basename(args.model)
-        sampler = telemetry_start(args.no_telemetry)
-        if isinstance(sampler, GpuSampler):
-            time.sleep(1.2)  # a few ticks of idle baseline before pass 1
-        for i in range(args.passes):
-            sys.stderr.write("picchio: pass {}{} ...\n".format(
-                i + 1, " (includes any cold load)" if i == 0 else " (warm)"))
+    if mode == "ollama" and ollama_ps_entry(args.model):
+        sys.stderr.write("picchio: unloading model for a colder pass 1 ...\n")
+        ollama_unload(args.model)
+    sampler = telemetry_start(args.no_telemetry)
+    if isinstance(sampler, GpuSampler):
+        time.sleep(1.2)  # a few ticks of idle baseline before pass 1
+    for i in range(args.passes):
+        sys.stderr.write("picchio: pass {}{} ...\n".format(
+            i + 1, " (includes any cold load)" if i == 0 else " (warm)"))
+        if mode == "llama.cpp":
             p = run_llama_pass(binpath, args.model, args.extra,
                                lp("pass{}.stderr.txt".format(i + 1)))
-            if isinstance(sampler, GpuSampler):
-                sampler.mark_pass(p)
-            keep_log(lp("pass{}.meta.json".format(i + 1)), json.dumps(
-                {"wall_s": p["wall_s"], "engine": engine_str,
-                 "model_name": model_name, "extra_args": args.extra},
-                indent=1))
-            passes.append(p)
-    elif not looks_like_tag(args.model):
-        sys.exit("picchio: no such file: {}\nRun picchio with no "
-                 "arguments to see the models on this machine.".format(
-                     args.model))
-    else:
-        ver = ollama_reachable()
-        if not ver:
-            sys.exit(
-                "picchio: {!r} looks like an ollama tag, but no ollama "
-                "answered at {}.\nStart ollama, or give a .gguf path; "
-                "run picchio with no arguments to see both.".format(
-                    args.model, OLLAMA_HOST))
-        if not ollama_has_model(args.model):
-            sys.exit("picchio: ollama at {} does not know the model "
-                     "{!r}.\nRun picchio with no arguments to list "
-                     "what it does know.".format(OLLAMA_HOST, args.model))
-        if args.extra:
-            sys.exit("picchio: passthrough args after -- only work in "
-                     "llama.cpp mode.")
-        mode = "ollama"
-        engine_str = "ollama " + ver
-        model_name = args.model
-        if ollama_ps_entry(args.model):
-            sys.stderr.write("picchio: unloading model for a colder "
-                             "pass 1 ...\n")
-            ollama_unload(args.model)
-        sampler = telemetry_start(args.no_telemetry)
-        if isinstance(sampler, GpuSampler):
-            time.sleep(1.2)  # a few ticks of idle baseline before pass 1
-        for i in range(args.passes):
-            sys.stderr.write("picchio: pass {}{} ...\n".format(
-                i + 1, " (includes any cold load)" if i == 0 else " (warm)"))
+            meta = {"wall_s": p["wall_s"], "engine": engine_str,
+                    "model_name": model_name, "extra_args": args.extra}
+        else:
             p, ps = run_ollama_pass(
                 args.model, lp("pass{}.response.json".format(i + 1)))
-            if isinstance(sampler, GpuSampler):
-                sampler.mark_pass(p)
-            keep_log(lp("pass{}.meta.json".format(i + 1)), json.dumps(
-                {"wall_s": p["wall_s"], "engine": engine_str,
-                 "model_name": model_name, "ps": ps}, indent=1))
-            passes.append(p)
+            meta = {"wall_s": p["wall_s"], "engine": engine_str,
+                    "model_name": model_name, "ps": ps}
+        if isinstance(sampler, GpuSampler):
+            sampler.mark_pass(p)
+        keep_log(lp("pass{}.meta.json".format(i + 1)),
+                 json.dumps(meta, indent=1))
+        passes.append(p)
 
     tele = sampler.stop() if isinstance(sampler, GpuSampler) else sampler
     if isinstance(sampler, GpuSampler):

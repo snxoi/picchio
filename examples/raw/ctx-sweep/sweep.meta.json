@@ -1,0 +1,11 @@
+{
+ "engine": "llama.cpp b9430",
+ "model_name": "Qwen3.5-9B-Q4_K_M.gguf",
+ "mode": "llama.cpp",
+ "tiers": [
+  4096,
+  16384,
+  32768
+ ],
+ "passes": 2
+}

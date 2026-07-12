@@ -1,0 +1,9 @@
+ctx sweep  Qwen3.5-9B-Q4_K_M.gguf, llama.cpp b9430
+depth   ctx         prefill        decode     wallclock
+  2531  4096    559.9 tok/s    20.0 tok/s    10.4 tok/s
+ 10439  16384   434.4 tok/s    18.7 tok/s     4.0 tok/s
+ 21079  32768   393.4 tok/s    17.9 tok/s     2.1 tok/s
+SLOPE: decode fell 11% from 2531 to 21079 tokens (8x deeper): 20.0
+  -> 17.9 tok/s. Long context is not free; the kv cache taxes
+  every token you generate.
+-- picchio v0.1.0 ctx-sweep on Apple M5, 32 GB, macOS 26.5.1

@@ -64,7 +64,7 @@ python3 picchio.py /path/to/model.gguf
 python3 picchio.py qwen3.5:9b
 ```
 
-No pip, no dependencies, no config. One Python file, 1473 lines,
+No pip, no dependencies, no config. One Python file, 1923 lines,
 stdlib only. If you have python3 plus either llama.cpp or ollama, you
 already have everything it needs. It runs your model three times with
 a fixed prompt (the first pass cold, the rest warm), reads the
@@ -82,8 +82,9 @@ or context size, and once before you post a tok/s number anywhere.
 The parser is pinned by the raw logs in this repo. Running
 `python3 picchio.py --selftest` replays the unedited engine output in
 [examples/raw/](examples/raw/) and has to reproduce every committed
-verdict block line for line; right now that is 9 pass fixtures, 3
-blocks and 4 checks on the compare ladder, and the badge above runs
+verdict block line for line; right now that is 12 pass fixtures, 4
+blocks, 4 checks on the compare ladder and 5 synthetic telemetry
+timelines through the three source judge, and the badge above runs
 exactly that on every push.
 
 ## Three findings set the tone
@@ -179,6 +180,77 @@ python3 picchio.py model.gguf -- --device none -ngl 0
 ```
 
 Anything after the bare `--` goes straight to the llama.cpp binary.
+
+## The engine does not have to confess
+
+Everything above still trusts the engine's own log to say where the
+layers went. That log has been wrong before: ollama has shipped
+releases that reported a full GPU load while the kernels ran
+elsewhere, and llama-bench prints the same backend column whether
+your tokens used the GPU or not. So on macOS picchio stopped relying
+on the confession alone: while the passes run, a background thread
+reads the OS's own GPU accounting (`ioreg`, the accelerator's
+utilization and memory counters) about four times a second, and GPU
+power from the same energy counters `powermetrics` reports, except
+that this path needs no sudo.
+
+That becomes one extra line of evidence in the block, directly under
+the engine's claim. Real run, committed with its raw logs and the
+sampled curve ([examples/healthy-metal-os.txt](examples/healthy-metal-os.txt)):
+
+```
+model    Qwen3.5-9B-Q4_K_M.gguf, 8.95 B, 5.28 GiB, llama.cpp b9430
+gpu      ENGAGED: 33/33 layers on GPU (Metal: Apple M5)
+os       gpu idle 0%, work 99%, mem +6.2 GiB, 10.7 W
+ctx 4096         prefill         decode      wallclock
+  cold       558.2 tok/s     19.4 tok/s     13.9 tok/s
+  warm mid   576.5 tok/s     20.2 tok/s     14.3 tok/s
+  warm span      570~583      19.8~20.6      13.9~14.7
+where the cold pass went (9.2 s, 4/10 threads, weights cached)
+  load weights    0.4 s  #...........................    5%
+  prefill         1.4 s  ####........................   15%
+  decode          6.5 s  ####################........   72%
+  engine misc     0.8 s  ##..........................    9%
+VERDICT: HEALTHY. The GPU did the work. Quote the warm median
+  decode: 20.2 tok/s.
+-- picchio v0.1.0 mp1 on Apple M5, 32 GB, macOS 26.5.1
+```
+
+Read the os line against the gpu line above it. The engine says
+33/33 layers on GPU. The OS says: the GPU sat at 0% before the run,
+ran at a median 99% device utilization exactly while the tokens were
+made, its allocated memory stepped up 6.2 GiB when the 5.28 GiB of
+weights landed, and it drew 10.7 W doing the work. The engine could
+have written anything; the meter was watching either way.
+
+A verdict is now a three way agreement. The engine's confession, the
+OS meter, and the prefill/decode speed signature all get a vote, and
+a full offload claim earns HEALTHY only while no source contradicts
+it. When the engine claims a full offload and the OS watched the GPU
+stay flat through the whole run, the verdict is CONFLICTING EVIDENCE
+(exit 5) and the two claims sit printed one above the other. On this
+machine the two sides measure a median 99% device utilization apart
+(a forced CPU run stays at 0%), so the fight is not subtle.
+
+The line degrades out loud, never silently. Off macOS, with
+`--no-telemetry`, or when ioreg gives nothing back, it prints
+`os       gpu not sampled (reason); evidence: engine+timing` so the
+block always says which evidence the verdict rests on. On a machine
+that was already busy before the run it prints `not idle; not
+judged`: the meter counts the whole GPU, and picchio will not blame
+or absolve your engine using someone else's workload. A missing
+source abstains; only a present, contradicting one can flip the
+verdict.
+
+When macOS reports thermal pressure around the run, the line ends
+with `throttled`. Power and thermal state are presentation, not
+votes.
+
+Because the meter belongs to the OS and not to any engine, the same
+line appears in ollama mode, sampled from outside the server
+process, and would work unchanged over any future engine. The other
+blocks in this readme were recorded before the sampler existed; a
+live run on macOS today includes the line.
 
 ## The number you saw somewhere
 
@@ -300,9 +372,12 @@ That is why llama.cpp mode is the full diagnosis and ollama mode is
 measurement plus a placement check. If ollama gives no memory split at
 all, picchio reports the placement as unknown instead of guessing. And
 because a reported split can itself be wrong, picchio cross checks it
-against the measured rates: when ollama claims full GPU placement but
-the prefill to decode ratio looks CPU shaped, the verdict downgrades
-to CONFLICTING EVIDENCE instead of HEALTHY.
+twice: against the OS meter (the os line works here exactly as in
+llama.cpp mode, since the OS does not care who scheduled the work) and
+against the measured rates. When ollama claims full GPU placement but
+the GPU never woke up, or the prefill to decode ratio looks CPU
+shaped, the verdict downgrades to CONFLICTING EVIDENCE instead of
+HEALTHY.
 Measurement over llama.cpp, measurement over ollama, comparing two
 saved blocks, and the guard mode below: that is the whole scope, and
 picchio stays one readable file.
@@ -365,7 +440,10 @@ compare          diff two saved verdict blocks variable by variable,
                  blame the first config difference on the ladder
 --passes N       measurement passes, first one cold (default 3)
 --explain TOKS   classify a number you saw against the measured lanes
---keep-logs DIR  save each pass's raw engine output into DIR
+--keep-logs DIR  save each pass's raw engine output into DIR, plus
+                 the sampled GPU curve (telemetry.json) on macOS
+--no-telemetry   skip the OS-side GPU sampling; the os line then
+                 says the verdict rests on engine+timing only
 --json           machine readable measurements after the block
 --bin PATH       choose the llama.cpp binary yourself
 --selftest       replay examples/raw, verify committed verdicts reproduce
@@ -523,6 +601,19 @@ model was not recently loaded; when the load times give that away, the
 block says weights cached. Warm prefill here still carries some spread
 (522~596 across two warm passes); more passes tighten the median at
 the cost of runtime (`--passes 5`).
+
+The os line has its own boundaries. Watching changes the watched, so
+the sampler's cost was measured before it shipped: alternating 7 pass
+runs with sampling on and off left the warm median decode difference
+below the run to run drift (adjacent pairs differed 0.0% and 0.4%,
+and the sampled runs were not the slower ones), which is why it runs
+at 4 Hz and stays on by default; `--no-telemetry` turns it off. The
+meter counts the whole GPU, not one process, so it only judges runs
+that started from an idle GPU and says `not judged` otherwise. The
+watts come from a private macOS framework (the same counters
+powermetrics prints); an OS update can move that framework, in which
+case the watts drop off the os line and everything else keeps
+working. Off macOS there is no os evidence yet, and the line says so.
 
 Exit codes, for scripting: 0 healthy or no evidence, 2 could not run,
 3 partial offload, 4 silent CPU fallback, 5 conflicting evidence.

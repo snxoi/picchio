@@ -119,7 +119,19 @@ evidence while the meter watches the gpu stay idle is SILENT CPU
 FALLBACK (exit 4), measured on a real mis-built binary. A missing
 source abstains; the line says which evidence is left.
 
+The same meter runs standalone, next to whatever you are working
+on; it launches nothing and unloads nothing:
+
+```
+python3 picchio.py watch --engine ollama --for 8
+```
+
+`--for` is the sampling window in seconds; `--engine ollama` names
+the model being judged ([real output](examples/watch-ollama.txt)).
+
 ## Commands
+
+In the table, `picchio` stands for `python3 picchio.py`.
 
 | command | what it does | real output |
 |---------|--------------|-------------|

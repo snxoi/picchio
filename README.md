@@ -22,9 +22,8 @@ that measures what you have, what a run did, and where it ran.</p>
 
 </div>
 
-That block is the product: 15 lines, 66 columns, real output,
-unedited ([examples/healthy-metal.txt](examples/healthy-metal.txt)).
-The text version is the one you paste:
+Real output, unedited
+([examples/healthy-metal.txt](examples/healthy-metal.txt)):
 
 ```
 model    Qwen3.5-9B-Q4_K_M.gguf, 8.95 B, 5.28 GiB, llama.cpp b9430
@@ -51,19 +50,14 @@ curl -LO https://raw.githubusercontent.com/logxio/picchio/main/picchio.py
 python3 picchio.py
 ```
 
-That second line, with no arguments, looks around your machine
-(ollama tags, the current folder, the HF and LM Studio caches). One
-model found, it runs it; several, it lists them and you pick by
-number, path, or tag; none, it asks for a path. It asks once, then
-runs to the verdict block without stopping. Piped or redirected, it
-prints the commands instead. Or point it at a model yourself:
-a .gguf path (`python3 picchio.py /path/to/model.gguf`) gets the
-full llama.cpp diagnosis, an ollama tag (`python3 picchio.py
-qwen3.5:9b`) gets measurement mode.
+With no arguments it finds your models (ollama tags, the current
+folder, the HF and LM Studio caches) and runs the one you pick. A
+.gguf path gets the full llama.cpp diagnosis; an ollama tag gets
+measurement mode.
 
-No pip, no dependencies, no config. One Python file, 4180 lines,
-stdlib only; python3 plus either llama.cpp or ollama is everything
-it needs. It runs your model three times with a fixed prompt (the
+One Python file, stdlib only; python3 plus either llama.cpp or
+ollama is everything it needs. It runs your model three times with
+a fixed prompt (the
 first pass cold, the rest warm), reads the engine's own numbers
 while a background thread reads the OS's GPU meter, and prints the
 block above. A run costs about a minute here with the GPU engaged,

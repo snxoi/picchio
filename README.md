@@ -217,9 +217,9 @@ Apple M5, 32 GB, macOS 26.5.1, llama.cpp build 9430 and ollama
 0.31.1, roughly 730 prompt tokens and 128 generated tokens per pass,
 three passes, the first one cold. That protocol is named in every
 block footer (mp1); if it ever changes the tag changes. Every
-number came out of a real run on this hardware, the lane columns
-hold warm medians, and the raw engine output behind the first three
-rows sits in [examples/raw/](examples/raw/), written by
+number came out of a real run on the machine in its row, the lane
+columns hold warm medians, and the raw engine output behind the
+first three rows sits in [examples/raw/](examples/raw/), written by
 `--keep-logs`.
 
 | machine         | model, engine                      | protocol | prefill | decode | wallclock | verdict             |
@@ -229,9 +229,11 @@ rows sits in [examples/raw/](examples/raw/), written by
 | Apple M5, 32 GB | qwen3.5:9b, ollama 0.31.1          | mp1      |   833.8 |   21.3 |      18.1 | HEALTHY             |
 | Apple M5, 32 GB | Qwen3.6-35B-A3B UD-Q4, llama.cpp   | mp1      |   787.3 |   34.4 |      19.1 | HEALTHY             |
 | Apple M5, 32 GB | qwen3.6:35b-a3b, ollama 0.31.1     | mp1      |  1191.8 |   33.4 |      27.6 | HEALTHY             |
+| RTX 4090, Linux | Qwen3.5-9B Q4_K_M, llama.cpp b9430 | mp1      |  6763.3 |  138.0 |      25.2 | HEALTHY             |
 | your machine    |                                    |          |         |        |           |                     |
 
-I only own one computer, which is why this table is mostly missing.
+I only own one computer (the 4090 was rented for an afternoon to
+exercise the Linux path), which is why this table is mostly missing.
 Run picchio once and paste the verdict block into an issue, even if
 it says everything is fine; a boring HEALTHY on hardware I do not
 have is still a data point. A wrong verdict is the issue I want
@@ -247,10 +249,12 @@ picchio on a machine that is otherwise idle.
 
 ## Limits
 
-- The tested path is one Apple Silicon machine, llama.cpp and
-  ollama. Linux parsing (CUDA and Vulkan log lines, /proc hardware
-  info) is written but has not touched real hardware; if you run it
-  there, I want the verdict block either way.
+- The tested path is one Apple Silicon machine (llama.cpp and
+  ollama) plus one rented Linux RTX 4090, where the CUDA parsing
+  and the verdict held. ollama on Linux and Vulkan log lines have
+  not touched real hardware; if you run those, I want the verdict
+  block either way. The os line does not sample on Linux yet, so a
+  Linux verdict rests on the engine log and the speed signature.
 - The full verdict block, with its three lanes and cold-start
   breakdown, is llama.cpp and ollama only. MLX, LM Studio and other
   engines get placement truth through `watch`, not the lane table.

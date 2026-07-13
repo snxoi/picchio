@@ -185,9 +185,8 @@ WHY: forced by flag: --device none -ngl 0
 -- picchio v0.1.0 mp1 on Apple M5, 32 GB, macOS 26.5.1
 ```
 
-Decode barely dropped, but prefill fell 22x: the first word of a
-long prompt now takes a minute and a half. The WHY line names the
-first cause the run's own evidence can prove, or says unknown.
+Decode barely dropped, but prefill fell 22x. The WHY line names
+the first cause the run's own evidence can prove, or says unknown.
 
 While measuring local models for an app I am building, weeks of
 it, bare llama.cpp gave me 36 tok/s and the same model through the
@@ -221,11 +220,10 @@ this machine, same model, same day:
 | llama-bench, default      | pp256: 597.06 | tg64: 20.21     | backend column: BLAS,MTL  |
 | llama-bench, -ngl 0 (CPU) | pp256: 27.82  | tg64: 11.90     | backend column: BLAS,MTL  |
 
-That column lists what the binary was compiled with, not where
-your tokens ran. The rented 4090 shows the same behavior: its CUDA build
-keeps `CUDA` in that column at `-ngl 0`. The 21x prompt side
-collapse is the CPU run's only visible trace; there is no load
-time, no cold/warm split, no verdict.
+The rented 4090 does the same: its CUDA build keeps `CUDA` in that
+column at `-ngl 0`. The 21x prompt side collapse is the CPU run's
+only visible trace; there is no load time, no cold/warm split, no
+verdict.
 
 ## Measured on this machine
 
@@ -257,11 +255,10 @@ most: [misdiagnosis reports](.github/ISSUE_TEMPLATE/misdiagnosis-report.md)
 go to the top of the pile.
 
 The 35B rows: a 34.7B MoE with about 3B active parameters decodes
-1.6x faster here than the dense 9B (34.4 against 21.1 tok/s), while
-its 20.6 GiB of weights turn the cold start into a load problem, 13
-of that first pass's 19 seconds going to loading. A large download
-running in the background cut decode roughly in half, so run
-picchio on a machine that is otherwise idle.
+1.6x faster here than the dense 9B, while its 20.6 GiB of weights
+turn the cold start into a load problem: 13 of the first pass's 19
+seconds. A background download cut decode roughly in half; run
+picchio on an idle machine.
 
 ## Limits
 

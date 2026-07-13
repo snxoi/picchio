@@ -4,11 +4,6 @@
 
 <h1>picchio</h1>
 
-<p>Most GPU speed claims are one tok/s number. That number can be
-correct and still tell you the wrong story. picchio splits
-prefill, decode and wallclock, reads the engine's log against the
-OS's GPU meter, and says whether the GPU did the work.</p>
-
 <p>
 <a href="https://github.com/logxio/picchio/actions/workflows/selftest.yml"><img src="https://github.com/logxio/picchio/actions/workflows/selftest.yml/badge.svg" alt="selftest"></a>
 <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-2ea44f" alt="license: MIT"></a>
@@ -23,26 +18,10 @@ OS's GPU meter, and says whether the GPU did the work.</p>
 
 </div>
 
-Real output, unedited
-([examples/healthy-metal.txt](examples/healthy-metal.txt)):
-
-```
-model    Qwen3.5-9B-Q4_K_M.gguf, 8.95 B, 5.28 GiB, llama.cpp b9430
-gpu      ENGAGED: 33/33 layers on GPU (Metal: Apple M5)
-os       gpu idle 0%, work 99%, mem +6.0 GiB, 11.0 W
-ctx 4096         prefill         decode      wallclock
-  cold       584.9 tok/s     21.0 tok/s     13.1 tok/s
-  warm mid   588.0 tok/s     21.1 tok/s     15.5 tok/s
-  warm span      585~591      21.0~21.2      15.4~15.5
-where the cold pass went (9.7 s, 4/10 threads)
-  load weights    1.8 s  #####.......................   18%
-  prefill         1.3 s  ####........................   13%
-  decode          6.1 s  #################...........   62%
-  engine misc     0.6 s  ##..........................    6%
-VERDICT: HEALTHY. The GPU did the work. Quote the warm median
-  decode: 21.1 tok/s.
--- picchio v0.1.0 mp1 on Apple M5, 32 GB, macOS 26.5.1
-```
+Most GPU speed claims are one tok/s number. That number can be
+correct and still tell you the wrong story. picchio splits
+prefill, decode and wallclock, reads the engine's log against the
+OS's GPU meter, and says whether the GPU did the work.
 
 ## Install
 

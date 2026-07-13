@@ -57,8 +57,8 @@ folder, the HF and LM Studio caches) and runs the one you pick. A
 measurement mode.
 
 One Python file, stdlib only; needs python3 and either llama.cpp
-or ollama. Three passes with a fixed prompt, the first one cold:
-about a minute here with the GPU engaged, a few minutes on CPU. It
+or ollama. Three passes with a fixed prompt, the first one cold.
+About a minute here with the GPU engaged, a few minutes on CPU. It
 writes one cache file under `~/.cache/picchio` and nothing else.
 
 `python3 picchio.py --selftest` replays the raw engine logs in
@@ -197,7 +197,7 @@ for this machine and model, measured here, same model, same day:
 | llama-bench, default      | pp256: 597.06 | tg64: 20.21     | backend column: BLAS,MTL  |
 | llama-bench, -ngl 0 (CPU) | pp256: 27.82  | tg64: 11.90     | backend column: BLAS,MTL  |
 
-The rented 4090 does the same: its CUDA build keeps `CUDA` in that
+The rented 4090 does the same. Its CUDA build keeps `CUDA` in that
 column at `-ngl 0`. The 21x prompt side collapse is the CPU run's
 only visible trace; there is no load time, no cold/warm split, no
 verdict.
@@ -224,8 +224,8 @@ written by `--keep-logs`.
 
 Run picchio once and paste the verdict block into an issue; a
 boring HEALTHY on hardware I do not have is still a data point. A
-wrong verdict is the issue I want most:
-[misdiagnosis reports](.github/ISSUE_TEMPLATE/misdiagnosis-report.md)
+wrong verdict is the issue I want most.
+[Misdiagnosis reports](.github/ISSUE_TEMPLATE/misdiagnosis-report.md)
 go to the top of the pile.
 
 The 35B result is mostly a load-time problem. 13 of the first

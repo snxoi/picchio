@@ -249,41 +249,23 @@ seconds. A background download cut decode roughly in half.
 
 ## Limits
 
-- The tested path is one Apple Silicon machine (llama.cpp and
-  ollama) plus one rented Linux RTX 4090, where the CUDA parsing,
-  the NVML os line and the verdict held on two driver majors (550,
-  580). ollama on Linux and Vulkan log lines have
-  not touched real hardware; if you run those, I want the verdict
-  block either way. The Linux os line reads NVML, whose utilization
-  figure updates on the driver's own period (up to a second), and
-  it reads gpu index 0 only; multi gpu selection is not built.
-- The full verdict block, with its three lanes and cold-start
-  breakdown, is llama.cpp and ollama only. MLX, LM Studio and other
-  engines get placement truth through `watch`, not the lane table.
+- Tested: one Apple Silicon machine (llama.cpp and ollama) plus
+  one rented Linux RTX 4090 (CUDA). ollama on Linux and Vulkan
+  parsing have not touched real hardware; if you run those, I want
+  the verdict block either way.
+- The full verdict block is llama.cpp and ollama only. MLX, LM
+  Studio and other engines get placement truth through `watch`,
+  not the lane table.
 - Ollama does not expose per layer placement, device init logs, or
   thread configuration. Placement comes from the memory split it
   reports, unknown when there is none.
-- Server mode gets no placement claim from the llama-server api,
-  so the judgment rests on the os meter and the speed signature;
-  there is no cold row (the server already owns the weights), each
-  pass forces a full prompt read (per request cache off), and on a
-  remote url the os line says not sampled, the footer names the
-  machine picchio ran on, and wallclock includes the network round
-  trip.
-- Very old llama.cpp builds may only get partial evidence; the
-  block names whatever is missing.
-- Passes run back to back, so the first is only a true cold start
-  if the model was not recently loaded; the block then says weights
-  cached, because a cached load flatters your first token time.
+- Server mode forces a full prompt read on every pass; on a remote
+  url, wallclock includes the network round trip.
 - Warm numbers drift between sessions: the 9B medians in this repo
   moved 5 to 8% between two recording rounds on an idle machine.
-  More passes (`--passes 5`) tighten a single reading.
-- The os meter counts the whole GPU, not one process, so it only
+  `--passes 5` tightens a single reading.
+- The os meter counts the whole GPU (index 0 on Linux), so it only
   judges runs that started from an idle GPU.
-- On macOS the watts come from a private framework (the same
-  counters powermetrics prints); an OS update can move it, in which
-  case the watts drop off the line and everything else keeps
-  working. The Linux watts come from NVML, a public api.
 
 ## License
 

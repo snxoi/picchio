@@ -12,7 +12,7 @@
 <img src="https://img.shields.io/badge/python-3.9%2B%2C%20stdlib%20only-3776ab" alt="python 3.9+, stdlib only">
 </p>
 
-<p><a href="#install">Install</a> · <a href="#the-quant-label">Quant</a> · <a href="#three-lanes">Lanes</a> · <a href="#commands">Commands</a> · <a href="#measured">Measured</a> · <a href="examples/">Examples</a></p>
+<p><a href="#install">Install</a> · <a href="#commands">Commands</a> · <a href="#the-quant-label">Quant</a> · <a href="#three-lanes">Lanes</a> · <a href="#measured">Measured</a> · <a href="examples/">Examples</a></p>
 
 <img src="assets/picchio-demo.svg" width="600" alt="animated terminal replay: python3 picchio.py finds two models, runs three passes, and prints the 15 line verdict block, verdict HEALTHY">
 
@@ -56,6 +56,57 @@ writes one cache file under `~/.cache/picchio` and nothing else.
 `python3 picchio.py --selftest` replays the raw engine logs in
 [examples/raw/](examples/raw/) and must reproduce every committed
 verdict block line for line; the badge runs it on every push.
+
+## Commands
+
+In the table, `picchio` stands for `python3 picchio.py`.
+
+| command | what it does | real output |
+|---------|--------------|-------------|
+| `picchio model.gguf` | full llama.cpp diagnosis: three passes, placement, cold start breakdown, verdict | [example](examples/healthy-metal.txt) |
+| `picchio qwen3.5:9b` | same passes through your local ollama server, placement from the memory split it reports | [example](examples/ollama-qwen35.txt) |
+| `picchio http://127.0.0.1:8080` | measures a llama-server already running, nothing launched, warm rows only | [example](examples/server-endpoint.txt) |
+| `picchio guard -- <command>` | wraps your own command, warns the moment layers land off the GPU, never kills it | [example](examples/guard-ngl0.txt) |
+| `picchio compare A.txt B.txt` | diffs two saved blocks variable by variable, the first config difference takes the blame | [example](examples/compare.txt) |
+| `picchio verify FILE` | flags a pasted block whose own numbers contradict each other | [example](examples/verify-forged.txt) |
+| `picchio watch [PID]` | points the OS GPU meter at a process or the whole GPU, no engine log parsing (macOS) | [example](examples/watch-ollama.txt) |
+| `picchio plan [MODEL]` | will it fit, priced from the gguf header; a decode estimate appears once one run is measured | [example](examples/plan-35b.txt) |
+| `picchio id MODEL` | splits the quant label: per tensor type mix, effective bits per weight, KV dtype, experts | [example](examples/id-35b.txt) |
+| `picchio --explain 36` | classifies a number you saw against the lanes measured here (cached rates, no rerun) | [example](examples/explain-36.txt) |
+| `picchio model.gguf --ctx-sweep` | re-measures the lanes at several context depths and reports the decay slope | [example](examples/ctx-sweep.txt) |
+
+`watch` runs next to real work, launching nothing and unloading
+nothing; `--for` is the sampling window in seconds, `--engine
+ollama` names the model being judged:
+
+```
+python3 picchio.py watch --engine ollama --for 8
+```
+
+```
+--passes N       measurement passes, first one cold (default 3)
+--keep-logs DIR  save each pass's raw engine output into DIR, plus
+                 the sampled GPU curve (telemetry.json) on macOS
+                 and on NVIDIA Linux
+--no-telemetry   skip the OS-side GPU sampling; the os line then
+                 says the verdict rests on engine+timing only
+--json           machine readable measurements after the block
+--bin PATH       choose the llama.cpp binary yourself
+--selftest       replay examples/raw, verify committed verdicts reproduce
+--version        print version and measurement protocol
+```
+
+Anything after a bare `--` goes straight to the llama.cpp binary.
+Color only on a terminal (`NO_COLOR` respected); piped output is
+plain ASCII.
+
+Exit codes, for scripting: 0 healthy or no evidence, 2 could not
+run, 3 partial offload, 4 silent CPU fallback, 5 conflicting
+evidence. guard passes the wrapped command's own exit code through
+(128 plus the signal number if it died by one); compare exits 0
+once both blocks parse; verify exits 0 when a block is
+self-consistent, 5 when its sources fight; watch exits 0 when the
+GPU is working, 4 when it sits idle.
 
 ## The quant label
 
@@ -118,59 +169,6 @@ flat is CONFLICTING EVIDENCE (exit 5). A build that prints no gpu
 evidence while the meter watches the gpu stay idle is SILENT CPU
 FALLBACK (exit 4), measured on a real mis-built binary. A missing
 source abstains; the line says which evidence is left.
-
-The same meter runs standalone, next to whatever you are working
-on; it launches nothing and unloads nothing:
-
-```
-python3 picchio.py watch --engine ollama --for 8
-```
-
-`--for` is the sampling window in seconds; `--engine ollama` names
-the model being judged ([real output](examples/watch-ollama.txt)).
-
-## Commands
-
-In the table, `picchio` stands for `python3 picchio.py`.
-
-| command | what it does | real output |
-|---------|--------------|-------------|
-| `picchio model.gguf` | full llama.cpp diagnosis: three passes, placement, cold start breakdown, verdict | [example](examples/healthy-metal.txt) |
-| `picchio qwen3.5:9b` | same passes through your local ollama server, placement from the memory split it reports | [example](examples/ollama-qwen35.txt) |
-| `picchio http://127.0.0.1:8080` | measures a llama-server already running, nothing launched, warm rows only | [example](examples/server-endpoint.txt) |
-| `picchio guard -- <command>` | wraps your own command, warns the moment layers land off the GPU, never kills it | [example](examples/guard-ngl0.txt) |
-| `picchio compare A.txt B.txt` | diffs two saved blocks variable by variable, the first config difference takes the blame | [example](examples/compare.txt) |
-| `picchio verify FILE` | flags a pasted block whose own numbers contradict each other | [example](examples/verify-forged.txt) |
-| `picchio watch [PID]` | points the OS GPU meter at a process or the whole GPU, no engine log parsing (macOS) | [example](examples/watch-ollama.txt) |
-| `picchio plan [MODEL]` | will it fit, priced from the gguf header; a decode estimate appears once one run is measured | [example](examples/plan-35b.txt) |
-| `picchio id MODEL` | splits the quant label: per tensor type mix, effective bits per weight, KV dtype, experts | [example](examples/id-35b.txt) |
-| `picchio --explain 36` | classifies a number you saw against the lanes measured here (cached rates, no rerun) | [example](examples/explain-36.txt) |
-| `picchio model.gguf --ctx-sweep` | re-measures the lanes at several context depths and reports the decay slope | [example](examples/ctx-sweep.txt) |
-
-```
---passes N       measurement passes, first one cold (default 3)
---keep-logs DIR  save each pass's raw engine output into DIR, plus
-                 the sampled GPU curve (telemetry.json) on macOS
-                 and on NVIDIA Linux
---no-telemetry   skip the OS-side GPU sampling; the os line then
-                 says the verdict rests on engine+timing only
---json           machine readable measurements after the block
---bin PATH       choose the llama.cpp binary yourself
---selftest       replay examples/raw, verify committed verdicts reproduce
---version        print version and measurement protocol
-```
-
-Anything after a bare `--` goes straight to the llama.cpp binary.
-Color only on a terminal (`NO_COLOR` respected); piped output is
-plain ASCII.
-
-Exit codes, for scripting: 0 healthy or no evidence, 2 could not
-run, 3 partial offload, 4 silent CPU fallback, 5 conflicting
-evidence. guard passes the wrapped command's own exit code through
-(128 plus the signal number if it died by one); compare exits 0
-once both blocks parse; verify exits 0 when a block is
-self-consistent, 5 when its sources fight; watch exits 0 when the
-GPU is working, 4 when it sits idle.
 
 ## llama-bench
 

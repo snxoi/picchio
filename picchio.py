@@ -167,6 +167,7 @@ def blank_pass():
         "model_params": None, "model_size": None, "model_bytes": None,
         "threads": None, "cores": None,
         "vram_frac": None, "n_expert": None,
+        "kv_types": None, "tensor_types": None,
         "free_mib": None, "fit_seen": False, "init_fail": None,
         "prefill_toks": None, "decode_toks": None, "wallclock_toks": None,
     }
@@ -303,6 +304,17 @@ def parse_stderr(text, wall_s):
     # e.g. "using device MTL0 (Apple M5) (unknown id) - 25558 MiB free":
     # the free figure the engine itself saw, kept for WHY attribution.
     re_free = re.compile(r"-\s*(\d+)\s*MiB free")
+    # e.g. "llama_kv_cache: size = 4352.00 MiB (..., 1/1 seqs),
+    # K (q8_0): 2176.00 MiB, V (q8_0): 2176.00 MiB": the runtime kv
+    # dtype, measured here on b9430 with -ctk q8_0 -ctv q8_0 (the f16
+    # default is in every committed fixture). Cached so the id card
+    # can cite a dtype this machine has actually run.
+    re_kvtypes = re.compile(r"llama_kv_cache: size =.*"
+                            r"K \((\S+)\):.*V \((\S+)\):")
+    # e.g. "llama_model_loader: - type q4_K:  132 tensors": the
+    # loader's own per-type census, the engine side of the id cross
+    # check against the gguf table walk
+    re_ttype = re.compile(r"- type\s+(\S+):\s+(\d+) tensors")
 
     for line in text.splitlines():
         if "prompt eval time" in line:
@@ -359,6 +371,15 @@ def parse_stderr(text, wall_s):
         m = re_free.search(line)
         if m:
             d["free_mib"] = int(m.group(1))
+        m = re_kvtypes.search(line)
+        if m:
+            d["kv_types"] = [m.group(1), m.group(2)]
+        m = re_ttype.search(line)
+        if m:
+            # the loader prints the census once per load and loads
+            # twice per pass; identical values, overwrite is idempotent
+            d["tensor_types"] = d["tensor_types"] or {}
+            d["tensor_types"][m.group(1)] = int(m.group(2))
         m = re.search(r"n_expert\s+=\s*(\d+)", line)
         if m:
             # 0 on a dense model; the cache keeps this so plan knows a
@@ -2541,7 +2562,9 @@ def gguf_meta_stream(f):
     version = struct.unpack("<I", f.read(4))[0]
     if version < 2:
         raise ValueError("gguf v{} predates the v2 layout".format(version))
-    f.read(8)  # tensor count, not needed for the account
+    # tensor count: no part of the kv account, but the id walk resumes
+    # right after this function, so it rides along under a private key
+    n_tensors = struct.unpack("<Q", f.read(8))[0]
     n_kv = struct.unpack("<Q", f.read(8))[0]
     if n_kv > 65536:
         raise ValueError("gguf header claims {} keys".format(n_kv))
@@ -2569,7 +2592,7 @@ def gguf_meta_stream(f):
         fmt = GGUF_TYPES[t]
         return struct.unpack(fmt, f.read(struct.calcsize(fmt)))[0]
 
-    out = {}
+    out = {"__tensor_count": n_tensors}
     for _ in range(n_kv):
         key = rstr()
         t = struct.unpack("<I", f.read(4))[0]
@@ -2867,6 +2890,301 @@ def plan_cli(argv):
         sys.exit("picchio plan: no models found on this machine; give "
                  "it a .gguf path or an ollama tag.")
     print(render_plan_scan(rows, budget, blabel, bw, speed_note))
+    sys.exit(0)
+
+
+# --------------------------------------------------- id (effective identity)
+#
+# picchio id splits the one word people trade ("4bit") back into the
+# three axes it actually is. The weight recipe: general.file_type is a
+# recipe name, and every recipe mixes per-tensor types, so the card
+# walks the tensor table and prices each tensor by its ggml type into
+# one effective bits-per-weight figure. The kv cache: a runtime flag,
+# never in the file, so the card cites only a dtype this machine has
+# measured. The experts: on a mixture of experts most weights sit
+# parked, and expert_used_count over expert_count is how many wake per
+# token. Same contract as plan: read only, no verdict block, exit 0.
+
+# ggml type number -> (name, bytes per block, elements per block),
+# probed from this machine's own libggml 0.13.1 (the library the
+# b9430 binaries link) through ggml_type_name / ggml_type_size /
+# ggml_blck_size. Removed and deprecated slots are absent on purpose:
+# an unknown number refuses loudly instead of guessing a size.
+GGML_TENSOR_TYPES = {
+    0: ("f32", 4, 1), 1: ("f16", 2, 1), 2: ("q4_0", 18, 32),
+    3: ("q4_1", 20, 32), 6: ("q5_0", 22, 32), 7: ("q5_1", 24, 32),
+    8: ("q8_0", 34, 32), 9: ("q8_1", 36, 32), 10: ("q2_K", 84, 256),
+    11: ("q3_K", 110, 256), 12: ("q4_K", 144, 256),
+    13: ("q5_K", 176, 256), 14: ("q6_K", 210, 256),
+    15: ("q8_K", 292, 256), 16: ("iq2_xxs", 66, 256),
+    17: ("iq2_xs", 74, 256), 18: ("iq3_xxs", 98, 256),
+    19: ("iq1_s", 50, 256), 20: ("iq4_nl", 18, 32),
+    21: ("iq3_s", 110, 256), 22: ("iq2_s", 82, 256),
+    23: ("iq4_xs", 136, 256), 24: ("i8", 1, 1), 25: ("i16", 2, 1),
+    26: ("i32", 4, 1), 27: ("i64", 8, 1), 28: ("f64", 8, 1),
+    29: ("iq1_m", 56, 256), 30: ("bf16", 2, 1), 34: ("tq1_0", 54, 256),
+    35: ("tq2_0", 66, 256), 39: ("mxfp4", 17, 32),
+    40: ("nvfp4", 36, 64), 41: ("q1_0", 18, 128),
+}
+
+# general.file_type number -> recipe name, from the llama_ftype enum
+# in this machine's b9430 llama.h (removed slots absent, same rule)
+LLAMA_FTYPES = {
+    0: "F32", 1: "F16", 2: "Q4_0", 3: "Q4_1", 7: "Q8_0", 8: "Q5_0",
+    9: "Q5_1", 10: "Q2_K", 11: "Q3_K_S", 12: "Q3_K_M", 13: "Q3_K_L",
+    14: "Q4_K_S", 15: "Q4_K_M", 16: "Q5_K_S", 17: "Q5_K_M",
+    18: "Q6_K", 19: "IQ2_XXS", 20: "IQ2_XS", 21: "Q2_K_S",
+    22: "IQ3_XS", 23: "IQ3_XXS", 24: "IQ1_S", 25: "IQ4_NL",
+    26: "IQ3_S", 27: "IQ3_M", 28: "IQ2_S", 29: "IQ2_M", 30: "IQ4_XS",
+    31: "IQ1_M", 32: "BF16", 36: "TQ1_0", 37: "TQ2_0",
+    38: "MXFP4_MOE", 39: "NVFP4", 40: "Q1_0",
+}
+
+
+def gguf_tensor_table(f, n_tensors):
+    """The descriptor table between the kv section and the tensor
+    data, layout verified against the local 9B file byte by byte: per
+    tensor a u64-length name, u32 dimension count, u64 dims fastest
+    first, u32 ggml type, u64 offset relative to the aligned start of
+    the data section. Returns (descriptors, header end position)."""
+    if n_tensors > 65536:
+        raise ValueError("gguf header claims {} tensors".format(n_tensors))
+    out = []
+    for _ in range(n_tensors):
+        n = struct.unpack("<Q", f.read(8))[0]
+        if n > 1 << 16:
+            raise ValueError("gguf tensor name of {} bytes".format(n))
+        name = f.read(n).decode("utf-8", "replace")
+        nd = struct.unpack("<I", f.read(4))[0]
+        if nd > 8:
+            raise ValueError("{} claims {} dimensions".format(name, nd))
+        dims = struct.unpack("<{}Q".format(nd), f.read(8 * nd))
+        ttype = struct.unpack("<I", f.read(4))[0]
+        off = struct.unpack("<Q", f.read(8))[0]
+        out.append((name, dims, ttype, off))
+    return out, f.tell()
+
+
+def ollama_tensor_table(ts):
+    """/api/show tensors (name, type string, shape) mapped onto the
+    same descriptor tuples the file walk yields. The api mirrors the
+    table without offsets (measured on 0.31.1), so only the type
+    arithmetic can price it; the offset audit is file-only."""
+    byname = {v[0].lower(): k for k, v in GGML_TENSOR_TYPES.items()}
+    out = []
+    for t in ts:
+        tt = byname.get(str(t.get("type", "")).lower())
+        if tt is None:
+            raise ValueError("unknown tensor type {!r} on {}".format(
+                t.get("type"), t.get("name", "?")))
+        out.append((t.get("name", "?"),
+                    tuple(int(d) for d in t.get("shape", [])), tt, None))
+    return out
+
+
+def id_account(tensors, data_bytes=None, align=32):
+    """({type name: [tensors, elements, bytes]}, elements, bytes),
+    priced two ways when the file is at hand. Method one is type
+    arithmetic: elements over the block size times the block bytes.
+    Method two is the header's own offsets: each tensor must end
+    within one alignment unit of the next offset, the last within one
+    unit of the data section end. Both landed on the same byte total
+    on both local files (zero padding); a mismatch raises, because a
+    wrong triple or a misread table must never print a number."""
+    hist, elems, total, priced = {}, 0, 0, []
+    for name, dims, tt, off in tensors:
+        if tt not in GGML_TENSOR_TYPES:
+            raise ValueError("unknown ggml type {} on {}".format(tt, name))
+        tname, tsize, blck = GGML_TENSOR_TYPES[tt]
+        n = 1
+        for d in dims:
+            n *= int(d)
+        if not n or n % blck:
+            raise ValueError("{} elements do not fill {} blocks"
+                             .format(name, tname))
+        b = n // blck * tsize
+        h = hist.setdefault(tname, [0, 0, 0])
+        h[0] += 1
+        h[1] += n
+        h[2] += b
+        elems += n
+        total += b
+        priced.append((name, off, b))
+    if not elems:
+        raise ValueError("the tensor table is empty")
+    if data_bytes is not None:
+        priced.sort(key=lambda t: t[1])
+        for i, (name, off, b) in enumerate(priced):
+            nxt = priced[i + 1][1] if i + 1 < len(priced) else data_bytes
+            if not (off + b <= nxt < off + b + align):
+                raise ValueError("offset audit failed at {}: the typed "
+                                 "size does not meet the next offset"
+                                 .format(name))
+    return hist, elems, total
+
+
+def id_experts(meta, tensors, elems):
+    """(used, count, active elements) or None on a dense model. An
+    expert bank is any tensor whose slowest dimension equals
+    expert_count: on the local 35B that selects exactly the
+    ffn_{down,gate,up}_exps banks, and the api mirror reports the
+    same dimension order, so one rule serves both sources."""
+    count = _arch_get(meta, "expert_count")
+    if not count:
+        return None
+    used = int(_arch_get(meta, "expert_used_count") or 0)
+    bank = 0
+    for name, dims, tt, off in tensors:
+        if len(dims) >= 3 and int(dims[-1]) == int(count):
+            n = 1
+            for d in dims:
+                n *= int(d)
+            bank += n
+    active = elems - bank + bank * used // int(count)
+    return used, int(count), active
+
+
+def id_claim(recipe, name):
+    """What the model says it is before any walking: the declared
+    recipe name against the quant token the file or tag name carries.
+    Both are claims; the table walk is what checks them."""
+    m = re.findall(r"(?i)\b(?:[it]?q\d[0-9a-z_]*|bf16|f16|f32|mxfp4|"
+                   r"nvfp4)\b", name)
+    token = max(m, key=len) if m else None
+    if recipe and token:
+        if token.upper() == recipe.upper():
+            return "{} (general.file_type; the name agrees)".format(recipe)
+        return "{} in general.file_type, but the name says {}".format(
+            recipe, token)
+    if recipe:
+        return "{} (general.file_type; no quant token in the name)" \
+            .format(recipe)
+    if token:
+        return "{} from the name only; no general.file_type".format(token)
+    return "none: no general.file_type, no quant token in the name"
+
+
+def id_kv_note(cache):
+    """The kv axis only ever cites a dtype this machine has measured:
+    a run's stderr K/V markers land in the cache, and with none on
+    file the card says not measured instead of assuming f16."""
+    kt = (cache or {}).get("kv_types")
+    if kt:
+        return ("a runtime choice, not in the model. K {}, V {} on the "
+                "last measured run here ({}, {}); -ctk / -ctv move it "
+                "per run".format(kt[0], kt[1],
+                                 cache.get("model_name", "?"),
+                                 str(cache.get("stamp", "?"))[:10]))
+    return ("a runtime choice, not in the model, and no measured run "
+            "on this machine has recorded it yet. Measure once "
+            "(python3 picchio.py MODEL) and the card cites that run; "
+            "-ctk / -ctv move it per run")
+
+
+def _id_wrap(label, text):
+    return textwrap.wrap(text, width=WIDTH,
+                         initial_indent="  " + label.ljust(11),
+                         subsequent_indent=" " * 13)
+
+
+def render_id(name, claim, acct, moe, kv_note, audit_note):
+    """The identity card: claim, walked mixture, effective bits per
+    weight, then the axes the file cannot carry. Information card
+    contract, same as plan: no 15 line block, no mp1 footer."""
+    out = ["picchio id: " + name]
+    out += _id_wrap("claimed", claim)
+    if not acct:
+        out += _id_wrap("walked", "nothing: {}. The per tensor mix "
+                        "lives in the table itself; point id at the "
+                        ".gguf file for the walk.".format(audit_note))
+        out += _id_wrap("kv cache", kv_note)
+        return "\n".join(out)
+    hist, elems, total = acct
+    out += _id_wrap("walked", "{} tensors, {} types, priced one by "
+                    "one:".format(sum(h[0] for h in hist.values()),
+                                  len(hist)))
+    for tname in sorted(hist, key=lambda k: -hist[k][2]):
+        c, n, b = hist[tname]
+        out.append("    {:<8}{:>5} tensors {:>6.2f} bits {:>6.1f}% of "
+                   "weight bytes".format(tname, c, b * 8.0 / n,
+                                         100.0 * b / total))
+    out += _id_wrap("effective", "{:.2f} bits per weight: {:,} tensor "
+                    "bytes over {:,} weights; {}".format(
+                        total * 8.0 / elems, total, elems, audit_note))
+    out += _id_wrap("kv cache", kv_note)
+    if moe:
+        used, count, active = moe
+        out += _id_wrap("experts", "{} of {} wake per token: about "
+                        "{:.1f}B of the {:.1f}B weights are read for "
+                        "any one token".format(used, count,
+                                               active / 1e9,
+                                               elems / 1e9))
+    return "\n".join(out)
+
+
+def id_cli(argv):
+    if argv[:1] in (["-h"], ["--help"]):
+        print("usage: picchio.py id MODEL\n"
+              "split the quant label into the three axes it hides: the\n"
+              "per tensor type mix priced into one effective bits per\n"
+              "weight figure (walked from the gguf tensor table, offsets\n"
+              "audited), the kv cache dtype (a runtime choice, cited\n"
+              "only from a run measured here), and how many experts\n"
+              "wake per token on a mixture of experts. A .gguf path is\n"
+              "walked directly, an ollama tag through the api's mirror\n"
+              "of the same table. Read only, never a verdict.")
+        sys.exit(0)
+    if len(argv) != 1:
+        sys.exit("picchio id: usage: picchio.py id MODEL (a .gguf path "
+                 "or an ollama tag)")
+    arg = argv[0]
+    kv_note = id_kv_note(load_cache())
+    if os.path.isfile(arg):
+        name = os.path.basename(arg)
+        try:
+            with open(arg, "rb") as f:
+                meta = gguf_meta_stream(f)
+                tensors, hdr_end = gguf_tensor_table(
+                    f, meta.get("__tensor_count", 0))
+            align = int(meta.get("general.alignment") or 32)
+            data_start = (hdr_end + align - 1) // align * align
+            acct = id_account(tensors, os.path.getsize(arg) - data_start,
+                              align)
+        except (ValueError, struct.error, OSError) as e:
+            sys.exit("picchio id: {}: {}".format(name, e))
+        claim = id_claim(
+            LLAMA_FTYPES.get(meta.get("general.file_type")), name)
+        print(render_id(name, claim, acct,
+                        id_experts(meta, tensors, acct[1]), kv_note,
+                        "the header's own offsets audit to the same "
+                        "byte total"))
+        sys.exit(0)
+    if not looks_like_tag(arg):
+        sys.exit("picchio id: no such file: {}".format(arg))
+    if not ollama_reachable():
+        sys.exit("picchio id: {!r} looks like an ollama tag, but no "
+                 "ollama answered at {}.".format(arg, OLLAMA_HOST))
+    try:
+        show = ollama_api("/api/show", {"model": arg}, timeout=15)
+    except (urllib.error.URLError, OSError, ValueError):
+        sys.exit("picchio id: ollama at {} does not know the model "
+                 "{!r}.".format(OLLAMA_HOST, arg))
+    mi = show.get("model_info") or {}
+    recipe = LLAMA_FTYPES.get(mi.get("general.file_type")) \
+        or (show.get("details") or {}).get("quantization_level")
+    claim = id_claim(recipe, arg)
+    try:
+        if not show.get("tensors"):
+            raise ValueError("this ollama api answered without a "
+                             "tensors field")
+        tensors = ollama_tensor_table(show["tensors"])
+        acct = id_account(tensors)
+    except ValueError as e:
+        print(render_id(arg, claim, None, None, kv_note, str(e)))
+        sys.exit(0)
+    print(render_id(arg, claim, acct, id_experts(mi, tensors, acct[1]),
+                    kv_note, "typed shapes from the api, which mirrors "
+                    "the table without offsets, so no offset audit"))
     sys.exit(0)
 
 
@@ -3314,6 +3632,108 @@ def selftest():
             and plan_est_decode(bw, 10 * gib, True) is None \
             and mbw is None and "mixture of experts" in mnote:
         pl_ok += 1
+    # id: a synthetic gguf with a real tensor table replays through the
+    # same walk, account and expert arithmetic used live (the big real
+    # files stay out of ci; they are the manual acceptance step). The
+    # engine side of the cross check reads the committed real stderr.
+    id_ok, id_all = 0, 6
+
+    def synth_id_img(specs, kvs):
+        # a minimal legal gguf v3 image: kv section, tensor table,
+        # data section sized and aligned exactly like the real files
+        arch = "synthmoe"
+        pairs = [("general.architecture", 8,
+                  struct.pack("<Q", len(arch)) + arch.encode()),
+                 ("general.file_type", 4, struct.pack("<I", 15))]
+        pairs += [(arch + "." + k, 4, struct.pack("<I", v))
+                  for k, v in kvs]
+        kvb = b"".join(struct.pack("<Q", len(k)) + k.encode()
+                       + struct.pack("<I", t) + p for k, t, p in pairs)
+        off, rows = 0, []
+        for name, dims, tt in specs:
+            _tn, tsize, blck = GGML_TENSOR_TYPES[tt]
+            n = 1
+            for d in dims:
+                n *= d
+            rows.append(struct.pack("<Q", len(name)) + name.encode()
+                        + struct.pack("<I", len(dims))
+                        + struct.pack("<{}Q".format(len(dims)), *dims)
+                        + struct.pack("<I", tt) + struct.pack("<Q", off))
+            off += (n // blck * tsize + 31) // 32 * 32
+        img = (b"GGUF" + struct.pack("<I", 3)
+               + struct.pack("<Q", len(specs))
+               + struct.pack("<Q", len(pairs)) + kvb + b"".join(rows))
+        return img + b"\0" * (-len(img) % 32) + b"\0" * off
+
+    img = synth_id_img([("blk.0.attn_q.weight", (256, 4), 12),
+                        ("blk.0.ffn_down_exps.weight", (256, 2, 4), 13),
+                        ("output_norm.weight", (256,), 0)],
+                       [("expert_count", 4), ("expert_used_count", 2)])
+    fh = io.BytesIO(img)
+    idm = gguf_meta_stream(fh)
+    idt, id_hdr_end = gguf_tensor_table(fh, idm.get("__tensor_count", 0))
+    id_data = len(img) - (id_hdr_end + 31) // 32 * 32
+    idh, ide, idb = id_account(idt, id_data)
+    # 1: the walk reads the claim and the table, and the two pricing
+    #    methods close. Priced by hand from the machine's own libggml
+    #    triples: 1024 q4_K elements are 576 bytes (144 per 256
+    #    block), 2048 q5_K are 1408, 256 f32 are 1024.
+    if LLAMA_FTYPES.get(idm.get("general.file_type")) == "Q4_K_M" \
+            and idh["q4_K"] == [1, 1024, 576] \
+            and idh["q5_K"] == [1, 2048, 1408] \
+            and idh["f32"] == [1, 256, 1024] and (ide, idb) == (3328, 3008):
+        id_ok += 1
+    # 2: a lying offset and a type outside the pinned triples both
+    #    refuse to price instead of printing a wrong number
+    ok2 = 0
+    try:
+        id_account([idt[0], (idt[1][0], idt[1][1], idt[1][2],
+                             idt[1][3] + 64), idt[2]], id_data)
+    except ValueError:
+        ok2 += 1
+    try:
+        id_account([("x", (32,), 4, 0)])
+    except ValueError:
+        ok2 += 1
+    if ok2 == 2:
+        id_ok += 1
+    # 3: the engine's own loader census crosses the walk: the committed
+    #    healthy fixture reports the same five type counts the real
+    #    file's table measured (verified against the file the day this
+    #    landed), and its kv marker parses to f16/f16
+    hp = parse_stderr(open(os.path.join(
+        rawroot, "healthy-metal", "pass1.stderr.txt")).read(), 10.0)
+    if hp["tensor_types"] == {"f32": 177, "q8_0": 48, "q4_K": 132,
+                              "q5_K": 48, "q6_K": 22} \
+            and hp["kv_types"] == ["f16", "f16"]:
+        id_ok += 1
+    # 4: the non-f16 sample measured here (-ctk q8_0 -ctv q8_0,
+    #    committed raw) pins the K (q8_0) line shape
+    qp = parse_stderr(open(os.path.join(
+        rawroot, "kv-q8", "ctk-q8.stderr.txt")).read(), 1.0)
+    if qp["kv_types"] == ["q8_0", "q8_0"]:
+        id_ok += 1
+    # 5: the expert bank is the slowest dimension matching
+    #    expert_count: 2048 of 3328 elements park in banks, 2 of 4
+    #    experts wake, so one token reads 2304; a dense header (no
+    #    expert_count) renders no axis at all
+    if id_experts(idm, idt, ide) == (2, 4, 2304) \
+            and id_experts({"general.architecture": "d"}, idt, 9) is None:
+        id_ok += 1
+    # 6: the api mirror prices through the same account (no offsets to
+    #    audit over http) and an unknown type string refuses
+    ok6 = False
+    try:
+        oh, oe, ob = id_account(ollama_tensor_table(
+            [{"name": "w", "type": "Q4_K", "shape": [256, 4]}]))
+        ok6 = oh["q4_K"] == [1, 1024, 576] and (oe, ob) == (1024, 576)
+        ollama_tensor_table([{"name": "w", "type": "Q9_Z",
+                              "shape": [1]}])
+        ok6 = False
+    except ValueError:
+        pass
+    if ok6:
+        id_ok += 1
     # argv split: the `--` passthrough is cut by hand before argparse,
     # so its semantics cannot vary with the interpreter (3.9.6 and
     # 3.12.3 rejected an option followed by `--` as unrecognized
@@ -3396,19 +3816,20 @@ def selftest():
     print("parser fixtures {}/{}, verdict replay {}/{}, compare {}/{}, "
           "telemetry {}/{}, verify {}/{}, watch {}/{}, sweep {}/{}, "
           "server {}/{}, linux {}/{}, silent-engine {}/{}, curves {}/{}, "
-          "plan {}/{}, argv {}/{}, version {}/{}, onboarding {}/{}".format(
+          "plan {}/{}, id {}/{}, argv {}/{}, version {}/{}, "
+          "onboarding {}/{}".format(
               fx_ok, fx_all, rp_ok, rp_all, cp_ok, cp_all, te_ok, te_all,
               ve_ok, ve_all, wa_ok, wa_all, sw_ok, sw_all, sv_ok, sv_all,
               lx_ok, lx_all, se_ok, se_all, rc_ok, rc_all,
-              pl_ok, pl_all, av_ok, av_all, vp_ok, vp_all,
+              pl_ok, pl_all, id_ok, id_all, av_ok, av_all, vp_ok, vp_all,
               gd_ok, gd_all))
     sys.exit(0 if fx_ok == fx_all and rp_ok == rp_all and rp_all
              and cp_ok == cp_all and te_ok == te_all
              and ve_ok == ve_all and wa_ok == wa_all
              and sw_ok == sw_all and sv_ok == sv_all
              and lx_ok == lx_all and se_ok == se_all and rc_ok == rc_all
-             and pl_ok == pl_all and av_ok == av_all and vp_ok == vp_all
-             and gd_ok == gd_all else 1)
+             and pl_ok == pl_all and id_ok == id_all and av_ok == av_all
+             and vp_ok == vp_all and gd_ok == gd_all else 1)
 
 
 # -------------------------------------------------------------------- main
@@ -3462,6 +3883,9 @@ def main():
         return
     if sys.argv[1:2] == ["plan"]:
         plan_cli(sys.argv[2:])
+        return
+    if sys.argv[1:2] == ["id"]:
+        id_cli(sys.argv[2:])
         return
     ap = argparse.ArgumentParser(
         prog="picchio",
@@ -3521,6 +3945,13 @@ def main():
             "  fit, from the gguf header against this machine's memory\n"
             "  budget, plus an estimated decode rate once one diagnosis\n"
             "  has been measured here (estimates are always labeled)\n"
+            "\n"
+            "id mode:\n"
+            "  picchio.py id MODEL\n"
+            "  what the quant label actually holds: the per tensor type\n"
+            "  mix priced into effective bits per weight, the kv cache\n"
+            "  dtype (runtime, cited only from a run measured here), and\n"
+            "  how many experts wake per token on a mixture of experts\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -3727,6 +4158,9 @@ def main():
         "model_bytes": rep.get("model_bytes"),
         "moe": (bool(rep["n_expert"]) if rep.get("n_expert") is not None
                 else None),
+        # the runtime kv dtype this run actually used (llama.cpp
+        # stderr only); the id card cites it rather than assuming f16
+        "kv_types": rep.get("kv_types"),
     })
 
     if args.json:

@@ -222,18 +222,22 @@ def find_binary(explicit):
     )
 
 
-def engine_version(binpath):
-    out = _cmd_out([binpath, "--version"])
+def parse_engine_version(out):
     m = re.search(r"version:\s*(\S+)\s*\(([0-9a-f]+)\)", out)
     if m:
         return "b" + m.group(1)
     # tarball builds carry no git hash; take a bare version number when
-    # --version still prints one, and when even that is absent say
-    # version unknown instead of dressing the file name up as one
+    # --version still prints one. llama.cpp prints version: 0 (unknown)
+    # on such builds, and that 0 is a sentinel, not a version: say
+    # version unknown instead of dressing the sentinel up as build b0.
     m = re.search(r"version:\s*(\d\S*)", out)
-    if m:
+    if m and m.group(1) != "0":
         return "b" + m.group(1).lstrip("b")
     return "(version unknown)"
+
+
+def engine_version(binpath):
+    return parse_engine_version(_cmd_out([binpath, "--version"]))
 
 
 def run_llama_pass(binpath, model, extra_args, log_path=None,
@@ -3376,20 +3380,29 @@ def selftest():
             == ("run", "qwen3.5:9b") \
             and any("No model 9" in x for x in log):
         gd_ok += 1
+    vp_ok, vp_all = 0, 3
+    if parse_engine_version("version: 9430 (d48a56ef)") == "b9430":
+        vp_ok += 1
+    # the tarball sentinel that once rendered as a fake build b0
+    if parse_engine_version("version: 0 (unknown)") == "(version unknown)":
+        vp_ok += 1
+    if parse_engine_version("") == "(version unknown)":
+        vp_ok += 1
     print("parser fixtures {}/{}, verdict replay {}/{}, compare {}/{}, "
           "telemetry {}/{}, verify {}/{}, watch {}/{}, sweep {}/{}, "
           "server {}/{}, linux {}/{}, silent-engine {}/{}, curves {}/{}, "
-          "plan {}/{}, argv {}/{}, onboarding {}/{}".format(
+          "plan {}/{}, argv {}/{}, version {}/{}, onboarding {}/{}".format(
               fx_ok, fx_all, rp_ok, rp_all, cp_ok, cp_all, te_ok, te_all,
               ve_ok, ve_all, wa_ok, wa_all, sw_ok, sw_all, sv_ok, sv_all,
               lx_ok, lx_all, se_ok, se_all, rc_ok, rc_all,
-              pl_ok, pl_all, av_ok, av_all, gd_ok, gd_all))
+              pl_ok, pl_all, av_ok, av_all, vp_ok, vp_all,
+              gd_ok, gd_all))
     sys.exit(0 if fx_ok == fx_all and rp_ok == rp_all and rp_all
              and cp_ok == cp_all and te_ok == te_all
              and ve_ok == ve_all and wa_ok == wa_all
              and sw_ok == sw_all and sv_ok == sv_all
              and lx_ok == lx_all and se_ok == se_all and rc_ok == rc_all
-             and pl_ok == pl_all and av_ok == av_all
+             and pl_ok == pl_all and av_ok == av_all and vp_ok == vp_all
              and gd_ok == gd_all else 1)
 
 

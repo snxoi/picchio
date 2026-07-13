@@ -61,7 +61,7 @@ a .gguf path (`python3 picchio.py /path/to/model.gguf`) gets the
 full llama.cpp diagnosis, an ollama tag (`python3 picchio.py
 qwen3.5:9b`) gets measurement mode.
 
-No pip, no dependencies, no config. One Python file, 3728 lines,
+No pip, no dependencies, no config. One Python file, 3741 lines,
 stdlib only; python3 plus either llama.cpp or ollama is everything
 it needs. It runs your model three times with a fixed prompt (the
 first pass cold, the rest warm), reads the engine's own numbers

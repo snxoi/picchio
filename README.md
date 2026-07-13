@@ -4,9 +4,11 @@
 
 <h1>picchio</h1>
 
-<p>One Python file for your local LLM setup.<br>
-Which tok/s did you actually get, did the GPU really do the work,
-and what can this machine run?</p>
+<p>The same Q4_K_M model measures 5.02 to 5.27 bits per weight,
+depending on who quantized it. The same run measures 6763 and 25
+tok/s, depending on the lane you quote. And the GPU may not have
+done the work at all. One Python file that measures what you
+actually have, and what it actually did.</p>
 
 <p>
 <a href="https://github.com/logxio/picchio/actions/workflows/selftest.yml"><img src="https://github.com/logxio/picchio/actions/workflows/selftest.yml/badge.svg" alt="selftest"></a>
@@ -119,6 +121,21 @@ once both blocks parse; verify exits 0 when a block is
 self-consistent, 5 when its sources fight; watch exits 0 when the
 GPU is working, 4 when it sits idle.
 
+## The quant label
+
+`picchio id MODEL` walks the gguf tensor table and prices every
+tensor by its ggml type: our own Q4_K_M measures 5.07 bits per
+weight, a mix of five tensor types from 4.50 to 32.00 bits, and
+the header's own byte offsets have to audit to the same total
+before the card prints. The same Qwen3.5-9B under the same Q4_K_M
+label measures 5.02 to 5.27 bits per weight across four
+quantizers. The card also cites the KV cache dtype from the last
+run measured here, because the file does not carry that choice,
+and on a mixture of experts it reports how many experts wake per
+token ([examples/id-35b.txt](examples/id-35b.txt) reads 8 of 256,
+about 3.5B of 34.7B weights per token). Works on a .gguf path or
+an ollama tag, read only, exit 0.
+
 ## The three numbers
 
 Every tok/s figure belongs to one of three lanes, and picchio never
@@ -140,22 +157,6 @@ prefill and under 2x on decode (both runs are in
 Nearly every figure posted online is decode, but prefill sets the
 time to first token on a long prompt: a Mac screenshot showing 500
 tok/s is almost always prefill.
-
-## The quant label
-
-Two people can both say they run 4bit and be running different
-models. `picchio id MODEL` walks the gguf tensor table and prices
-every tensor by its ggml type: our own Q4_K_M measures 5.07 bits
-per weight, a mix of five tensor types from 4.50 to 32.00 bits,
-and the header's own byte offsets have to audit to the same total
-before the card prints. The same Qwen3.5-9B under the same Q4_K_M
-label measures 5.02 to 5.27 bits per weight across four
-quantizers. The card also cites the KV cache dtype
-from the last run measured here, because the file does not carry
-that choice, and on a mixture of experts it reports how many
-experts wake per token ([examples/id-35b.txt](examples/id-35b.txt)
-reads 8 of 256, about 3.5B of 34.7B weights per token). Works on
-a .gguf path or an ollama tag, read only, exit 0.
 
 ## Silent CPU fallback
 

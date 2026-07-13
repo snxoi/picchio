@@ -4,9 +4,9 @@
 
 <h1>picchio</h1>
 
-<p>One Python file that answers two questions about your local LLM
-setup: which tok/s did you actually get, and did the GPU really do
-the work?</p>
+<p>One Python file for your local LLM setup.<br>
+Which tok/s did you actually get, did the GPU really do the work,
+and what can this machine run?</p>
 
 <p>
 <a href="https://github.com/logxio/picchio/actions/workflows/selftest.yml"><img src="https://github.com/logxio/picchio/actions/workflows/selftest.yml/badge.svg" alt="selftest"></a>
@@ -22,10 +22,9 @@ the work?</p>
 
 </div>
 
-That block is the product: 15 lines, 66 columns, narrow enough to
-paste into a comment thread. Real output, unedited
-([examples/healthy-metal.txt](examples/healthy-metal.txt));
-the text version below is the one you paste:
+That block is the product: 15 lines, 66 columns, real output,
+unedited ([examples/healthy-metal.txt](examples/healthy-metal.txt)).
+The text version is the one you paste:
 
 ```
 model    Qwen3.5-9B-Q4_K_M.gguf, 8.95 B, 5.28 GiB, llama.cpp b9430
@@ -127,8 +126,7 @@ fast it writes the answer; wallclock is generated tokens divided by
 everything, load and warmup included, which is what your stopwatch
 measures. In the block above the warm medians land at 588, 21.1 and
 15.5; on the CPU run below they land at 27, 12 and 3; on the rented
-4090 the same model lands at 6763, 138 and 25. A tok/s number
-without its lane label cannot be compared with anything.
+4090 the same model lands at 6763, 138 and 25.
 
 <p align="center">
 <img src="assets/prefill-decode-asymmetry.svg" width="600" alt="prefill collapses 22x from GPU to CPU while decode only drops 1.7x on the same model and file">
@@ -183,9 +181,7 @@ the matrix did surface was this silent fallback.
 
 ## The os line
 
-Engine logs have been wrong before: ollama has shipped releases
-that reported a full GPU load while the kernels ran elsewhere. So
-while the passes run on macOS, a background thread reads the OS's
+While the passes run on macOS, a background thread reads the OS's
 own GPU accounting (`ioreg`, 4 Hz) and GPU power from the same
 energy counters `powermetrics` reports, minus the sudo: the `os`
 line. HEALTHY requires the engine's log, the OS meter and the
@@ -208,10 +204,9 @@ run. Measured on this machine, same model, same day:
 Both rows report the same backend, because that column describes
 what the binary was compiled with, not where your tokens were
 computed. The rented 4090 shows the same behavior: its CUDA build
-keeps `CUDA` in that column at `-ngl 0`. The 21x prompt side collapse is the CPU run's only
-visible trace, readable only if you already know the healthy
-baseline; there is no load time, no cold/warm split, no verdict.
-picchio reports that layer: placement, cold start, and a verdict.
+keeps `CUDA` in that column at `-ngl 0`. The 21x prompt side
+collapse is the CPU run's only visible trace; there is no load
+time, no cold/warm split, no verdict.
 
 ## Measured on this machine
 

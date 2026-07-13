@@ -39,7 +39,7 @@ whether the GPU did the work, and why.
 ## Install
 
 ```
-curl -LO https://raw.githubusercontent.com/logxio/picchio/main/picchio.py
+curl -fsSLO https://raw.githubusercontent.com/logxio/picchio/main/picchio.py
 python3 picchio.py
 ```
 

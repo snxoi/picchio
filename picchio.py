@@ -41,6 +41,9 @@
 #   python3 picchio.py model.gguf --ctx-sweep
 #                                       (re-measure at 4k/16k/32k context
 #                                        and report the decode decay slope)
+#   python3 picchio.py plan [MODEL]
+#                                       (will it fit, from the gguf header;
+#                                        decode estimate once calibrated)
 #
 # Needs: python3 (any recent one), plus llama.cpp on PATH or a local ollama.
 # Nothing else. No pip.
@@ -52,12 +55,14 @@
 import argparse
 import ctypes
 import glob
+import io
 import json
 import os
 import platform
 import re
 import shutil
 import statistics
+import struct
 import subprocess
 import sys
 import textwrap
@@ -151,7 +156,7 @@ def blank_pass():
         "gpu_device": None, "gpu_kind": None,
         "model_params": None, "model_size": None, "model_bytes": None,
         "threads": None, "cores": None,
-        "vram_frac": None,
+        "vram_frac": None, "n_expert": None,
         "free_mib": None, "fit_seen": False, "init_fail": None,
         "prefill_toks": None, "decode_toks": None, "wallclock_toks": None,
     }
@@ -322,6 +327,11 @@ def parse_stderr(text, wall_s):
         m = re_free.search(line)
         if m:
             d["free_mib"] = int(m.group(1))
+        m = re.search(r"n_expert\s+=\s*(\d+)", line)
+        if m:
+            # 0 on a dense model; the cache keeps this so plan knows a
+            # mixture of experts cannot calibrate bandwidth arithmetic
+            d["n_expert"] = int(m.group(1))
         if "common_params_fit_impl" in line:
             d["fit_seen"] = True
         low = line.lower()
@@ -2313,6 +2323,363 @@ def render_sweep(mach, engine_str, model_name, rows):
     return "\n".join(out)
 
 
+# ------------------------------------------------------- plan (capacity)
+#
+# picchio plan answers the question people ask before the download
+# finishes: will this model fit this machine, and roughly how fast will
+# it decode. The fit half is static and always available: the GGUF
+# header carries the geometry, and the account it feeds matched the
+# engine's own allocations exactly on both local models. The speed half
+# is only ever a projection of this machine's own last measured run;
+# with no run cached there is no number at all, because an estimate
+# with no measurement behind it is a guess wearing digits. Nothing plan
+# prints is a verdict block: no 15 line protocol, no mp1 footer, so a
+# projection can never be pasted somewhere a measurement belongs.
+
+GGUF_TYPES = {0: "<B", 1: "<b", 2: "<H", 3: "<h", 4: "<I", 5: "<i",
+              6: "<f", 7: "<?", 10: "<Q", 11: "<q", 12: "<d"}
+
+
+def gguf_meta_stream(f):
+    """The GGUF v2/v3 header key value table, scalars and strings only
+    (arrays are read past and dropped): magic, version, tensor count,
+    kv count, then typed pairs. Layout and every key name used
+    downstream were checked against the two local model files and
+    against ollama's /api/show mirror of the same table."""
+    if f.read(4) != b"GGUF":
+        raise ValueError("not a gguf file (magic mismatch)")
+    version = struct.unpack("<I", f.read(4))[0]
+    if version < 2:
+        raise ValueError("gguf v{} predates the v2 layout".format(version))
+    f.read(8)  # tensor count, not needed for the account
+    n_kv = struct.unpack("<Q", f.read(8))[0]
+    if n_kv > 65536:
+        raise ValueError("gguf header claims {} keys".format(n_kv))
+
+    def rstr():
+        n = struct.unpack("<Q", f.read(8))[0]
+        if n > 1 << 24:
+            raise ValueError("gguf string of {} bytes".format(n))
+        return f.read(n).decode("utf-8", "replace")
+
+    def rval(t):
+        if t == 8:
+            return rstr()
+        if t == 9:
+            it = struct.unpack("<I", f.read(4))[0]
+            cnt = struct.unpack("<Q", f.read(8))[0]
+            if it == 8:
+                for _ in range(cnt):
+                    rstr()
+            elif it == 9:
+                raise ValueError("nested gguf array")
+            else:
+                f.seek(struct.calcsize(GGUF_TYPES[it]) * cnt, 1)
+            return None  # array values feed nothing in the account
+        fmt = GGUF_TYPES[t]
+        return struct.unpack(fmt, f.read(struct.calcsize(fmt)))[0]
+
+    out = {}
+    for _ in range(n_kv):
+        key = rstr()
+        t = struct.unpack("<I", f.read(4))[0]
+        v = rval(t)
+        if v is not None:
+            out[key] = v
+    return out
+
+
+def gguf_meta(path):
+    with open(path, "rb") as f:
+        return gguf_meta_stream(f)
+
+
+def _arch_get(meta, key):
+    arch = meta.get("general.architecture")
+    return meta.get("{}.{}".format(arch, key)) if arch else None
+
+
+def plan_is_moe(meta):
+    return bool(_arch_get(meta, "expert_count"))
+
+
+def kv_account(meta, ctx=CTX):
+    """(kv bytes at ctx, note). Formula: ctx x attention layers x kv
+    heads x (key length + value length) x 2 bytes of f16. Hybrid
+    attention models mark every Nth layer as full attention
+    (full_attention_interval) and the rest hold constant state, so the
+    interval divides the layer count; honoring it lands this exactly
+    on the engine's own llama_kv_cache allocation for both local
+    models (128.00 MiB on the 9B, 80.00 MiB on the 35B MoE, ctx 4096,
+    the 9B line committed in examples/raw/healthy-metal). Experts
+    change the ffn, not the kv, so MoE needs no special case here.
+    When key/value length are absent the classic head_dim fallback is
+    embedding_length over head_count."""
+    if not meta.get("general.architecture"):
+        return None, "header lacks general.architecture"
+    blocks = _arch_get(meta, "block_count")
+    heads = _arch_get(meta, "attention.head_count")
+    heads_kv = _arch_get(meta, "attention.head_count_kv") or heads
+    klen = _arch_get(meta, "attention.key_length")
+    vlen = _arch_get(meta, "attention.value_length")
+    if (not klen or not vlen) and _arch_get(meta, "embedding_length") \
+            and heads:
+        klen = vlen = int(_arch_get(meta, "embedding_length")) // int(heads)
+    if not (blocks and heads_kv and klen and vlen):
+        return None, "header lacks the kv geometry keys"
+    interval = int(_arch_get(meta, "full_attention_interval") or 1)
+    att = max(1, int(blocks) // max(1, interval))
+    note = "at ctx {}".format(ctx)
+    if interval > 1:
+        note += ", {} of {} layers attend".format(att, blocks)
+    return int(ctx) * att * int(heads_kv) * (int(klen) + int(vlen)) * 2, note
+
+
+PLAN_COMPUTE = 512 * 1024 ** 2  # the graph buffer: sched_reserve
+# measured 505.02 MiB on the 9B and 493.00 MiB on the 35B here, so a
+# flat half GiB stands in for what the header cannot predict
+
+
+def plan_budget(mach):
+    """(budget bytes, label). On macOS the wall is the metal working
+    set, about 0.78 of ram: the engine itself reported 25558 MiB free
+    on the idle 32 GB test machine (the MiB-free figure in
+    examples/raw/healthy-metal). Elsewhere no fraction has been
+    calibrated yet, so whole ram is the bar and the label says the
+    check is ram only."""
+    ram = (mach["ram_gb"] or 0) * 1024 ** 3
+    if not ram:
+        return None, "ram size unknown"
+    if platform.system() == "Darwin":
+        return int(ram * 0.78), "metal working set, 0.78 of {} GB ram" \
+            .format(mach["ram_gb"])
+    return ram, "system ram only, gpu memory not judged"
+
+
+def plan_state(need, budget):
+    """fits / tight / no. The 35B MoE measured HEALTHY fully offloaded
+    at 85% of this budget (22.1 GB of weights on the 32 GB machine),
+    so fits runs to 0.95; past 1.05 even an idle machine has no room
+    left to find."""
+    r = need / budget
+    if r <= 0.95:
+        return "fits"
+    if r <= 1.05:
+        return "tight"
+    return "no"
+
+
+def plan_speed_source(cache):
+    """(bytes/s bandwidth, provenance) or (None, refusal). The one
+    legal source for a speed figure here is this machine's own last
+    measured run: warm decode times file size, the same arithmetic the
+    README derives effective bandwidth with. No cached run means no
+    number at all, and a mixture of experts cannot calibrate it: its
+    decode reads only the active experts, so decode times file size
+    overstates the bandwidth several fold."""
+    if not cache or not cache.get("model_bytes") \
+            or not (cache.get("rates") or {}).get("decode"):
+        return None, ("speed: not calibrated, no measured run cached "
+                      "on this machine. Run a diagnosis once (python3 "
+                      "picchio.py MODEL) and plan gains an estimated "
+                      "decode column from that run's bandwidth.")
+    if cache.get("moe"):
+        return None, ("speed: the cached run ({}) is a mixture of "
+                      "experts, and its bandwidth arithmetic does not "
+                      "transfer. Diagnose a dense model once for the "
+                      "estimate.".format(cache.get("model_name", "?")))
+    bw = cache["rates"]["decode"] * cache["model_bytes"]
+    return bw, "calibrated by {} at {:.1f} tok/s decode".format(
+        cache.get("model_name", "?"), cache["rates"]["decode"])
+
+
+def plan_est_decode(bw, file_bytes, moe):
+    """Estimated decode for one target, or None: a MoE target is never
+    priced (the file is not what each token reads)."""
+    if bw is None or not file_bytes or moe:
+        return None
+    return bw / file_bytes
+
+
+def _gib(n):
+    return "{:.1f} GiB".format(n / 1024 ** 3)
+
+
+def plan_target(arg):
+    """Resolve one plan argument into (name, file_bytes, meta, note):
+    a .gguf path is read directly, an ollama tag through /api/show
+    (model_info mirrors the same header keys) plus /api/tags for the
+    blob size. meta is None when unreadable, and note says why."""
+    if os.path.isfile(arg):
+        try:
+            return (os.path.basename(arg), os.path.getsize(arg),
+                    gguf_meta(arg), None)
+        except (ValueError, struct.error, KeyError, OSError) as e:
+            return (os.path.basename(arg), os.path.getsize(arg),
+                    None, str(e))
+    if not looks_like_tag(arg):
+        sys.exit("picchio plan: no such file: {}".format(arg))
+    if not ollama_reachable():
+        sys.exit("picchio plan: {!r} looks like an ollama tag, but no "
+                 "ollama answered at {}.".format(arg, OLLAMA_HOST))
+    try:
+        show = ollama_api("/api/show", {"model": arg}, timeout=15)
+    except (urllib.error.URLError, OSError, ValueError):
+        sys.exit("picchio plan: ollama at {} does not know the model "
+                 "{!r}.".format(OLLAMA_HOST, arg))
+    size = None
+    try:
+        for m in ollama_api("/api/tags", timeout=5).get("models", []):
+            if m.get("name") == arg or m.get("model") == arg:
+                size = m.get("size")
+    except (urllib.error.URLError, OSError, ValueError):
+        pass
+    return arg, size, show.get("model_info") or {}, None
+
+
+def plan_row(name, file_bytes, meta, note, budget, bw):
+    """One accounted row: need, state, estimate; honest holes where
+    the evidence is missing."""
+    if file_bytes is None:
+        return {"name": name, "need": None, "state": "not judged",
+                "est": None, "moe": False,
+                "note": note or "no size available"}
+    kv, kv_note = kv_account(meta) if meta else (None, note or "?")
+    need = file_bytes + (kv or 0) + PLAN_COMPUTE
+    moe = plan_is_moe(meta) if meta else False
+    state = plan_state(need, budget) if budget else "not judged"
+    return {"name": name, "need": need, "state": state, "moe": moe,
+            "est": plan_est_decode(bw, file_bytes, moe),
+            "kv": kv, "kv_note": kv_note, "file": file_bytes,
+            "note": None if meta else (note or "header unreadable")}
+
+
+def render_plan_one(row, budget, blabel, bw, speed_note):
+    out = ["picchio plan: " + row["name"]]
+    if row["need"] is None:
+        out.append("  " + row["note"])
+        return "\n".join(out)
+    out.append("  weights   {:>10}   the file itself".format(
+        _gib(row["file"])))
+    if row["kv"] is not None:
+        out.append("  kv cache  {:>10}   {}".format(_gib(row["kv"]),
+                                                    row["kv_note"]))
+    else:
+        out.append("  kv cache  {:>10}   not counted: {}".format(
+            "?", row.get("kv_note") or row.get("note") or "?"))
+    out.append("  compute   {:>10}   graph buffer, measured constant"
+               .format(_gib(PLAN_COMPUTE)))
+    out.append("  need      {:>10}".format(_gib(row["need"])))
+    if budget:
+        out.append("  budget    {:>10}   {}".format(_gib(budget), blabel))
+        out.append("  verdict   {:>10}   {:.0f}% of budget".format(
+            row["state"], 100.0 * row["need"] / budget))
+    else:
+        out.append("  verdict   not judged   " + blabel)
+    if row["note"]:
+        out.append("  note: " + row["note"])
+    if row["moe"]:
+        out.append("  speed: no estimate for a mixture of experts; each")
+        out.append("  token reads only the active experts, so file size")
+        out.append("  arithmetic would lie about it.")
+    elif row["est"] is not None:
+        out.append("  est decode  ~{:.1f} tok/s   estimate, not a "
+                   "measurement".format(row["est"]))
+        out += textwrap.wrap(speed_note, width=WIDTH - 4,
+                             initial_indent="    ",
+                             subsequent_indent="    ")
+    if row["est"] is None and not row["moe"]:
+        out += textwrap.wrap(speed_note, width=WIDTH,
+                             initial_indent="  ", subsequent_indent="  ")
+    return "\n".join(out)
+
+
+def render_plan_scan(rows, budget, blabel, bw, speed_note):
+    out = ["picchio plan: {} model{} on this machine".format(
+        len(rows), "" if len(rows) == 1 else "s")]
+    if budget:
+        out.append("budget {} ({})".format(_gib(budget), blabel))
+        out.append("kv counted at ctx {}".format(CTX))
+    else:
+        out.append("budget not judged: " + blabel)
+    out.append("")
+    calibrated = bw is not None
+    head = "  {:<30}{:>9}   {:<5}".format("model", "need", "fit")
+    if calibrated:
+        head += "  est decode"
+    out.append(head.rstrip())
+    for r in rows:
+        name = r["name"] if len(r["name"]) <= 30 else r["name"][:28] + ".."
+        line = "  {:<30}{:>9}   {:<5}".format(
+            name, _gib(r["need"]) if r["need"] else "?", r["state"])
+        if calibrated:
+            if r["est"] is not None:
+                line += "  ~{:.1f} tok/s".format(r["est"])
+            elif r["moe"]:
+                line += "  n/a (moe)"
+            else:
+                line += "  n/a"
+        out.append(line.rstrip())
+    out.append("")
+    if calibrated:
+        out += textwrap.wrap("every est decode figure is an estimate "
+                             "projected from one measured run ({}), not "
+                             "a measurement".format(speed_note),
+                             width=WIDTH, subsequent_indent="  ")
+    else:
+        out += textwrap.wrap(speed_note, width=WIDTH,
+                             subsequent_indent="  ")
+    return "\n".join(out)
+
+
+def plan_cli(argv):
+    if argv[:1] in (["-h"], ["--help"]):
+        print("usage: picchio.py plan [MODEL]\n"
+              "the capacity account before you download or load: will it\n"
+              "fit (gguf header geometry against this machine's memory\n"
+              "budget), and, once one real diagnosis has been run here,\n"
+              "an estimated decode rate. With no MODEL, accounts every\n"
+              "model found on this machine. Estimates are labeled and\n"
+              "never appear in a verdict block.")
+        sys.exit(0)
+    if len(argv) > 1:
+        sys.exit("picchio plan: usage: picchio.py plan [MODEL]")
+    mach = machine_info()
+    budget, blabel = plan_budget(mach)
+    bw, speed_note = plan_speed_source(load_cache())
+    if argv:
+        name, fb, meta, note = plan_target(argv[0])
+        row = plan_row(name, fb, meta, note, budget, bw)
+        print(render_plan_one(row, budget, blabel, bw, speed_note))
+        sys.exit(0)
+    sizes = {}
+    if ollama_reachable():
+        try:
+            for m in ollama_api("/api/tags", timeout=5).get("models", []):
+                if m.get("name"):
+                    sizes[m["name"]] = m.get("size")
+        except (urllib.error.URLError, OSError, ValueError):
+            pass
+    rows = []
+    for label, note, arg in scan_models():
+        if note == "gguf":
+            n, fb, meta, why = plan_target(arg)
+            rows.append(plan_row(n, fb, meta, why, budget, bw))
+        elif note == "ollama":
+            n, fb, meta, why = plan_target(arg)
+            fb = fb or sizes.get(arg)
+            rows.append(plan_row(n, fb, meta, why, budget, bw))
+        else:
+            rows.append({"name": label, "need": None, "est": None,
+                         "moe": False, "state": "not judged",
+                         "note": note})
+    if not rows:
+        sys.exit("picchio plan: no models found on this machine; give "
+                 "it a .gguf path or an ollama tag.")
+    print(render_plan_scan(rows, budget, blabel, bw, speed_note))
+    sys.exit(0)
+
+
 # ---------------------------------------------------------------- selftest
 
 def selftest():
@@ -2576,6 +2943,75 @@ def selftest():
     st, para = diagnose(midr, midr, "server", None)
     if st == "NO PLACEMENT EVIDENCE" and "placement is not" in para:
         sv_ok += 1
+    # plan: a synthetic gguf header replays through the real reader,
+    # and the kv formula must land on the engine's own committed
+    # allocation figures; the speed gate refuses everything but a
+    # cached dense measurement
+    pl_ok, pl_all = 0, 6
+
+    def synth_gguf(arch, kvs):
+        out = [b"GGUF", struct.pack("<I", 3), struct.pack("<Q", 0),
+               struct.pack("<Q", len(kvs) + 1)]
+
+        def emit(key, t, packed):
+            out.append(struct.pack("<Q", len(key)) + key.encode())
+            out.append(struct.pack("<I", t) + packed)
+
+        emit("general.architecture", 8,
+             struct.pack("<Q", len(arch)) + arch.encode())
+        for k, v in kvs.items():
+            emit(arch + "." + k, 4, struct.pack("<I", v))
+        return io.BytesIO(b"".join(out))
+
+    m9 = gguf_meta_stream(synth_gguf("qwen35", {
+        "block_count": 32, "attention.head_count": 16,
+        "attention.head_count_kv": 4, "attention.key_length": 256,
+        "attention.value_length": 256, "full_attention_interval": 4}))
+    kv9, note9 = kv_account(m9)
+    # 1: reader plus formula reproduce the engine's own 128.00 MiB
+    #    llama_kv_cache line (examples/raw/healthy-metal, ctx 4096)
+    if m9["qwen35.block_count"] == 32 and kv9 == 128 * 1024 ** 2 \
+            and "8 of 32" in note9:
+        pl_ok += 1
+    m35 = gguf_meta_stream(synth_gguf("qwen35moe", {
+        "block_count": 40, "attention.head_count": 16,
+        "attention.head_count_kv": 2, "attention.key_length": 256,
+        "attention.value_length": 256, "full_attention_interval": 4,
+        "expert_count": 256}))
+    kv35, _n = kv_account(m35)
+    # 2: the moe kv comes from the attention geometry alone: 80.00 MiB,
+    #    matching the engine's allocation for the local 35B
+    if kv35 == 80 * 1024 ** 2 and plan_is_moe(m35) and not plan_is_moe(m9):
+        pl_ok += 1
+    # 3: head_dim falls back to embedding over heads when the header
+    #    has no key/value length (the classic dense layout)
+    kvf, _n = kv_account(gguf_meta_stream(synth_gguf("llama", {
+        "block_count": 32, "attention.head_count": 32,
+        "attention.head_count_kv": 8, "embedding_length": 4096})))
+    if kvf == 4096 * 32 * 8 * 256 * 2:
+        pl_ok += 1
+    # 4: the fit bands sit where the calibration put them (the 35B ran
+    #    healthy at 85% of budget, so 80% fits, 100% tight, 112% no)
+    if plan_state(20 * gib, 25 * gib) == "fits" \
+            and plan_state(25 * gib, 25 * gib) == "tight" \
+            and plan_state(28 * gib, 25 * gib) == "no":
+        pl_ok += 1
+    # 5: no cached run, no speed: the refusal is explicit, not a guess
+    bw, note = plan_speed_source(None)
+    if bw is None and "not calibrated" in note:
+        pl_ok += 1
+    # 6: a cached dense run prices a dense target and refuses a moe
+    #    target; a cached moe run refuses to calibrate at all
+    bw, note = plan_speed_source({"model_bytes": 5 * gib, "moe": False,
+                                  "model_name": "m",
+                                  "rates": {"decode": 20.0}})
+    mbw, mnote = plan_speed_source({"model_bytes": 5 * gib, "moe": True,
+                                    "model_name": "m",
+                                    "rates": {"decode": 20.0}})
+    if bw == 100 * gib and plan_est_decode(bw, 10 * gib, False) == 10.0 \
+            and plan_est_decode(bw, 10 * gib, True) is None \
+            and mbw is None and "mixture of experts" in mnote:
+        pl_ok += 1
     # onboarding: the zero-argument entry decision is pure given what the
     # scan found, whether a terminal is attached, and what gets typed. The
     # four paths plus the two edges, none of them touching a tty or a gpu
@@ -2625,15 +3061,15 @@ def selftest():
         gd_ok += 1
     print("parser fixtures {}/{}, verdict replay {}/{}, compare {}/{}, "
           "telemetry {}/{}, verify {}/{}, watch {}/{}, sweep {}/{}, "
-          "server {}/{}, onboarding {}/{}".format(
+          "server {}/{}, plan {}/{}, onboarding {}/{}".format(
               fx_ok, fx_all, rp_ok, rp_all, cp_ok, cp_all, te_ok, te_all,
               ve_ok, ve_all, wa_ok, wa_all, sw_ok, sw_all, sv_ok, sv_all,
-              gd_ok, gd_all))
+              pl_ok, pl_all, gd_ok, gd_all))
     sys.exit(0 if fx_ok == fx_all and rp_ok == rp_all and rp_all
              and cp_ok == cp_all and te_ok == te_all
              and ve_ok == ve_all and wa_ok == wa_all
              and sw_ok == sw_all and sv_ok == sv_all
-             and gd_ok == gd_all else 1)
+             and pl_ok == pl_all and gd_ok == gd_all else 1)
 
 
 # -------------------------------------------------------------------- main
@@ -2669,6 +3105,9 @@ def main():
         return
     if sys.argv[1:2] == ["watch"]:
         watch_cli(sys.argv[2:])
+        return
+    if sys.argv[1:2] == ["plan"]:
+        plan_cli(sys.argv[2:])
         return
     ap = argparse.ArgumentParser(
         prog="picchio",
@@ -2721,6 +3160,13 @@ def main():
             "  picchio.py model.gguf --ctx-sweep [4096,16384,32768]\n"
             "  re-measure the three lanes at each context depth, each one\n"
             "  filled for real, and report how far decode decays with depth\n"
+            "\n"
+            "plan mode:\n"
+            "  picchio.py plan [MODEL]\n"
+            "  the capacity account before you download or load: will it\n"
+            "  fit, from the gguf header against this machine's memory\n"
+            "  budget, plus an estimated decode rate once one diagnosis\n"
+            "  has been measured here (estimates are always labeled)\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -2902,6 +3348,15 @@ def main():
                            block_ctx, args.extra, tele)
     print(colorize(block))
 
+    if mode == "server" and url_is_local(binpath) \
+            and not rep.get("model_bytes"):
+        # a loopback server's weights are a local file: its size is the
+        # one calibration figure the http api cannot give plan
+        try:
+            rep["model_bytes"] = os.path.getsize(
+                server_props(binpath).get("model_path") or "")
+        except OSError:
+            pass
     save_cache({
         "stamp": time.strftime("%Y-%m-%d %H:%M"),
         "model_name": model_name,
@@ -2909,6 +3364,11 @@ def main():
         "protocol": PROTOCOL,
         "rates": rates,
         "state": state,
+        # what plan's speed estimate calibrates from: decode x bytes is
+        # this machine's effective bandwidth, but only on a dense model
+        "model_bytes": rep.get("model_bytes"),
+        "moe": (bool(rep["n_expert"]) if rep.get("n_expert") is not None
+                else None),
     })
 
     if args.json:

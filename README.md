@@ -109,7 +109,7 @@ GPU is working, 4 when it sits idle.
 ## The quant label
 
 `picchio id MODEL` walks the gguf tensor table and prices every
-tensor by its ggml type: our own Q4_K_M measures 5.07 bits per
+tensor by its ggml type. Our own Q4_K_M measures 5.07 bits per
 weight, a mix of five tensor types from 4.50 to 32.00 bits, and
 the header's own byte offsets have to audit to the same total
 before the card prints. The same Qwen3.5-9B under the same Q4_K_M
@@ -126,10 +126,7 @@ an ollama tag, read only, exit 0.
 Prefill (elsewhere called prompt processing or pp) is
 how fast the model reads your prompt; decode (tg or eval) is how
 fast it writes the answer; wallclock is generated tokens divided by
-everything, load and warmup included. In the block above the warm
-medians land at 588, 21.1 and
-15.5; on the CPU run below they land at 27, 12 and 3; on the rented
-4090 the same model lands at 6763, 138 and 25.
+everything, load and warmup included.
 
 <p align="center">
 <img src="assets/prefill-decode-asymmetry.svg" width="600" alt="prefill collapses 22x from GPU to CPU while decode only drops 1.7x on the same model and file">
@@ -139,7 +136,7 @@ The lanes fail separately. Measured here, the GPU buys about 22x on
 prefill and under 2x on decode (both runs are in
 [examples/](examples/), 4 of 10 cpu threads on the CPU side).
 Nearly every figure posted online is decode, but prefill sets the
-time to first token on a long prompt: a Mac screenshot showing 500
+time to first token on a long prompt. A Mac screenshot showing 500
 tok/s is almost always prefill.
 
 ## Silent CPU fallback
@@ -192,8 +189,8 @@ source abstains; the line says which evidence is left.
 
 ## llama-bench
 
-llama-bench answers a different question: steady state pp and tg
-for this machine and model. Measured here, same model, same day:
+llama-bench answers a different question. Steady state pp and tg
+for this machine and model, measured here, same model, same day:
 
 | tool, config              | prompt side   | generation side | notes                     |
 |---------------------------|---------------|-----------------|---------------------------|
@@ -231,7 +228,7 @@ wrong verdict is the issue I want most:
 [misdiagnosis reports](.github/ISSUE_TEMPLATE/misdiagnosis-report.md)
 go to the top of the pile.
 
-The 35B result is mostly a load-time problem: 13 of the first
+The 35B result is mostly a load-time problem. 13 of the first
 pass's 19 seconds went to reading 20.6 GiB of weights. The
 3B-active MoE still decodes 1.6x faster than the dense 9B. A
 background download cut decode roughly in half.

@@ -1,11 +1,11 @@
 picchio monitor: probing http://127.0.0.1:8099 every 6 s (ctx 4096); ctrl-c to stop
-picchio monitor: 06:40:45 probe 1   ENGAGED  prefill 533.3 tok/s, decode 18.6 tok/s (28.7x)
-picchio monitor: 06:40:54 probe 2   ENGAGED  prefill 522.6 tok/s, decode 18.5 tok/s (28.2x)
-picchio monitor: 06:41:02 probe 3   ENGAGED  prefill 526.4 tok/s, decode 18.8 tok/s (28.0x)
-picchio monitor: baseline locked at 28x prefill/decode for this server; a collapse from it now flags too
-picchio monitor: probe 4 could not reach the server: Remote end closed connection without response
-picchio monitor: probe 5 could not reach the server: HTTP Error 503: Service Unavailable
-picchio monitor: 06:41:55 probe 6   NOT ENGAGED  prefill 25.3 tok/s, decode 11.3 tok/s (2.2x, was 28x)
+picchio monitor: 07:42:42 probe 1   ENGAGED  prefill 558.9 tok/s, decode 20.7 tok/s (27.0x)
+picchio monitor: 07:42:50 probe 2   ENGAGED  prefill 560.0 tok/s, decode 20.8 tok/s (27.0x)
+picchio monitor: 07:42:57 probe 3   ENGAGED  prefill 547.5 tok/s, decode 21.0 tok/s (26.1x)
+picchio monitor: baseline locked at 27x prefill/decode for this engine; a collapse from it now flags too
+picchio monitor: probe 4 could not reach the engine: Remote end closed connection without response
+picchio monitor: probe 5 could not reach the engine: <urlopen error [Errno 61] Connection refused>
+picchio monitor: 07:43:52 probe 6   NOT ENGAGED  prefill 24.5 tok/s, decode 10.9 tok/s (2.2x, was 27x)
 picchio monitor: placement changed ENGAGED -> NOT ENGAGED at probe 6
-picchio monitor: 06:42:36 probe 7   NOT ENGAGED  prefill 25.2 tok/s, decode 11.7 tok/s (2.2x, was 28x)
+picchio monitor: 07:44:35 probe 7   NOT ENGAGED  prefill 24.4 tok/s, decode 11.3 tok/s (2.2x, was 27x)
 picchio monitor: SILENT CPU FALLBACK seen - 5 probes, 3 engaged, 2 on cpu, 1 placement change(s), worst prefill 2.2x decode

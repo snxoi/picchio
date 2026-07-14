@@ -1,0 +1,14 @@
+model    Qwen3.5-9B-Q4_K_M.gguf, 8.95 B, 5.28 GiB, llama.cpp b9430
+gpu      ENGAGED: 33/33 layers on GPU (Metal: Apple M5)
+os       gpu idle 8%, work 5%, mem +0.3 GiB, 0.1 W
+ctx 4096         prefill         decode      wallclock
+  cold        22.8 tok/s      9.3 tok/s      2.5 tok/s
+  warm mid    26.8 tok/s     12.2 tok/s      3.0 tok/s
+  warm span        27~27      12.0~12.4        3.0~3.0
+where the cold pass went (49.9 s, 4/10 threads, weights cached)
+  load weights    2.1 s  #...........................    4%
+  prefill        33.4 s  ###################.........   67%
+  decode         13.7 s  ########....................   27%
+  engine misc     0.8 s  ............................    2%
+VERDICT: HEALTHY. The GPU did the work.
+-- picchio v0.1.0 mp1 on Apple M5, 32 GB, macOS 26.5.1

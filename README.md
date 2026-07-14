@@ -66,13 +66,13 @@ In the table, `picchio` stands for `python3 picchio.py`.
 | `picchio http://127.0.0.1:8080` | measures a llama-server already running, nothing launched, warm rows only | [example](examples/server-endpoint.txt) |
 | `picchio guard -- <command>` | wraps your own command, warns the moment layers land off the GPU, never kills it | [example](examples/guard-ngl0.txt) |
 | `picchio compare A.txt B.txt` | diffs two saved blocks variable by variable, the first config difference takes the blame | [example](examples/compare.txt) |
-| `picchio verify FILE` | flags a pasted block whose own numbers contradict each other | [example](examples/verify-forged.txt) |
+| `picchio verify FILE` | flags a pasted block whose own numbers contradict each other | [block](examples/forged-block.txt) · [output](examples/verify-forged.txt) |
 | `picchio watch [PID]` | points the OS GPU meter at a process or the whole GPU, no engine log parsing (macOS) | [example](examples/watch-ollama.txt) |
 | `picchio monitor TARGET` | probes a running llama-server url or ollama tag on a timer, flags any probe whose prefill/decode ratio collapses from that engine's own healthy baseline; `--json` for a pasteable session | [server](examples/monitor.txt) · [ollama+json](examples/monitor-ollama.txt) |
 | `picchio plan [MODEL]` | will it fit, priced from the gguf header; a decode estimate appears once one run is measured | [example](examples/plan-35b.txt) |
 | `picchio id MODEL` | splits the quant label: per tensor type mix, effective bits per weight, KV dtype, experts | [example](examples/id-35b.txt) |
 | `picchio --explain 36` | classifies a number you saw against the lanes measured here (cached rates, no rerun) | [example](examples/explain-36.txt) |
-| `picchio model.gguf --ctx-sweep` | re-measures the lanes at several context depths and reports the decay slope | [example](examples/ctx-sweep.txt) |
+| `picchio model.gguf --ctx-sweep` | re-measures the lanes at several context depths and reports the decay slope (several minutes: full passes per tier, not the ~1 min single run) | [example](examples/ctx-sweep.txt) |
 
 `watch` runs next to real work, launching nothing and unloading
 nothing; `--for` is the sampling window in seconds, `--engine
@@ -120,9 +120,11 @@ per weight across four quantizers, on the 427 tensors all four
 files share ([examples/quantizers/](examples/quantizers/)). The
 label does not even promise the same tensor set: one quantizer
 ships a 243M-parameter MTP head inside the main file at q8_0,
-another ships the same head as a separate repo. The KV cache dtype is not in the file; the card cites
-the last run measured here. On a mixture of experts it reports how
-many experts wake per token
+another ships the same head as a separate repo. The KV cache dtype is
+not in the file; the card cites only a concrete marker from the last
+measured run for that model and engine (llama.cpp stderr or a readable
+local Ollama runner log), and says not recorded when neither exposes
+one. On a mixture of experts it reports how many experts wake per token
 ([examples/id-35b.txt](examples/id-35b.txt) reads 8 of 256, about
 3.5B of 34.7B weights per token). Works on a .gguf path or
 an ollama tag, read only, exit 0.

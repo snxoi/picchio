@@ -1,11 +1,11 @@
 picchio monitor: probing qwen3.5:9b every 6 s (ctx 4096); ctrl-c to stop
-picchio monitor: 07:01:40 probe 1   ENGAGED  prefill 500.3 tok/s, decode 19.2 tok/s (26.0x)
-picchio monitor: 07:01:48 probe 2   ENGAGED  prefill 712.2 tok/s, decode 19.4 tok/s (36.7x)
-picchio monitor: 07:01:56 probe 3   ENGAGED  prefill 845.8 tok/s, decode 19.5 tok/s (43.3x)
-picchio monitor: baseline locked at 37x prefill/decode for this server; a collapse from it now flags too
-picchio monitor: 07:02:04 probe 4   ENGAGED  prefill 806.5 tok/s, decode 19.3 tok/s (41.7x)
-picchio monitor: 07:02:11 probe 5   ENGAGED  prefill 847.8 tok/s, decode 19.6 tok/s (43.3x)
-picchio monitor: ENGAGED throughout - 5 probes, 5 engaged, 0 on cpu, worst prefill 26.0x decode
+picchio monitor: 07:41:55 probe 1   ENGAGED  prefill 500.8 tok/s, decode 20.2 tok/s (24.8x)
+picchio monitor: 07:42:03 probe 2   ENGAGED  prefill 838.1 tok/s, decode 20.0 tok/s (42.0x)
+picchio monitor: 07:42:10 probe 3   ENGAGED  prefill 848.2 tok/s, decode 20.3 tok/s (41.7x)
+picchio monitor: baseline locked at 42x prefill/decode for this engine; a collapse from it now flags too
+picchio monitor: 07:42:18 probe 4   ENGAGED  prefill 850.8 tok/s, decode 20.3 tok/s (42.0x)
+picchio monitor: 07:42:25 probe 5   ENGAGED  prefill 846.7 tok/s, decode 20.4 tok/s (41.5x)
+picchio monitor: ENGAGED throughout - 5 probes, 5 engaged, 0 on cpu, worst prefill 24.8x decode
 {
  "tool": "picchio",
  "version": "0.1.0",
@@ -18,42 +18,42 @@ picchio monitor: ENGAGED throughout - 5 probes, 5 engaged, 0 on cpu, worst prefi
   "chip": "Apple M5",
   "ram_gb": 32
  },
- "baseline_ratio": 36.7,
+ "baseline_ratio": 41.7,
  "probes": [
   {
    "i": 1,
    "state": "OK",
-   "ratio": 26.0,
-   "prefill": 500.3,
-   "decode": 19.2
+   "ratio": 24.8,
+   "prefill": 500.8,
+   "decode": 20.2
   },
   {
    "i": 2,
    "state": "OK",
-   "ratio": 36.7,
-   "prefill": 712.2,
-   "decode": 19.4
+   "ratio": 42.0,
+   "prefill": 838.1,
+   "decode": 20.0
   },
   {
    "i": 3,
    "state": "OK",
-   "ratio": 43.3,
-   "prefill": 845.8,
-   "decode": 19.5
+   "ratio": 41.7,
+   "prefill": 848.2,
+   "decode": 20.3
   },
   {
    "i": 4,
    "state": "OK",
-   "ratio": 41.7,
-   "prefill": 806.5,
-   "decode": 19.3
+   "ratio": 42.0,
+   "prefill": 850.8,
+   "decode": 20.3
   },
   {
    "i": 5,
    "state": "OK",
-   "ratio": 43.3,
-   "prefill": 847.8,
-   "decode": 19.6
+   "ratio": 41.5,
+   "prefill": 846.7,
+   "decode": 20.4
   }
  ],
  "summary": {
@@ -61,7 +61,7 @@ picchio monitor: ENGAGED throughout - 5 probes, 5 engaged, 0 on cpu, worst prefi
   "engaged": 5,
   "cpu": 0,
   "transitions": 0,
-  "worst_ratio": 26.0
+  "worst_ratio": 24.8
  },
  "verdict": "ENGAGED throughout",
  "exit_code": 0

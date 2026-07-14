@@ -38,6 +38,9 @@
 #   python3 picchio.py watch --engine ollama
 #                                       (point the OS gpu meter at any
 #                                        running engine; no stderr parse)
+#   python3 picchio.py monitor http://127.0.0.1:8080
+#                                       (probe a running server on a timer;
+#                                        flag any request the GPU dropped)
 #   python3 picchio.py model.gguf --ctx-sweep
 #                                       (re-measure at 4k/16k/32k context
 #                                        and report the decode decay slope)
@@ -550,18 +553,27 @@ def scan_models():
             except OSError:
                 size = ""
             ggufs.append((os.path.basename(f), "gguf", f, size))
-    return ollama[:8] + ggufs[:8]
+    # cap what the menu shows, but count the overflow so the presenters can
+    # say "and N more" instead of dropping models silently (a long ollama
+    # library used to hide every tag past the eighth with no hint at all)
+    shown = ollama[:8] + ggufs[:8]
+    dropped = max(0, len(ollama) - 8) + max(0, len(ggufs) - 8)
+    return shown, dropped
 
 
-def print_discovery(cands):
+def print_discovery(cands, dropped=0):
     """No terminal to ask at (a pipe or a redirect): print the commands
-    that reproduce a run instead of a menu, each still pasteable as is."""
+    that reproduce a run instead of a menu, each still pasteable as is.
+    dropped counts models found past the cap, named so the list never
+    hides one without a trace."""
     print("picchio: no model given. Runnable on this machine:\n")
     rows = [('"{}"'.format(arg) if " " in arg else arg,
              _sourced(note, size)) for label, note, arg, size in cands]
     w = min(max(len(q) for q, _ in rows), 48)
     for q, note in rows:
         print("  python3 picchio.py {:<{w}} ({})".format(q, note, w=w))
+    if dropped:
+        print("  ... and {} more not shown.".format(dropped))
     print("\nPick one, or point it at any other .gguf path or ollama tag.")
 
 
@@ -575,11 +587,13 @@ def _ask_line(prompt):
         return None
 
 
-def resolve_direction(cands, interactive, ask, emit):
+def resolve_direction(cands, interactive, ask, emit, dropped=0):
     """The whole zero-argument entry decision, in one place and pure of
     real IO so every path is testable. cands is what scan_models found;
     interactive says a terminal is on both ends; ask(prompt) returns the
     next typed line (or None at EOF); emit(line) shows one status line.
+    dropped is how many models the scan found past the display cap, named
+    in the menu so a long library never hides a model without a trace.
     Returns (action, model): ('run', arg) to diagnose arg, ('print', None)
     to fall back to pasteable commands, ('stop', None) for nothing to run.
     The flow asks at most once, and only at a real fork; one model needs no
@@ -595,7 +609,7 @@ def resolve_direction(cands, interactive, ask, emit):
         emit("1 model found.")
         emit("Selected: {} ({}).".format(label, _sourced(note, size)))
         return ("run", arg)
-    emit("{} models found.".format(len(cands)))
+    emit("{} models found.".format(len(cands) + dropped))
     emit("")
     w = min(max(len(c[0]) for c in cands), 44)
     for i, (label, note, arg, size) in enumerate(cands, 1):
@@ -603,6 +617,9 @@ def resolve_direction(cands, interactive, ask, emit):
             label = label[:w - 14] + "..." + label[-11:]
         emit("  {:>2}) {:<{w}}  {:>9}   {}".format(i, label, size, note,
                                                    w=w))
+    if dropped:
+        emit("  ... and {} more not shown; type its tag or path to "
+             "run any.".format(dropped))
     emit("")
     while True:
         line = ask("Model (number, path, or tag): ")
@@ -1582,6 +1599,14 @@ def colorize(text, stream=None):
                 if word in line:
                     line = line.replace(word, BOLD + col + word + RESET, 1)
                     break
+        elif line.startswith("picchio monitor: "):
+            for word, col in (("NOT ENGAGED", RED),
+                              ("SILENT CPU FALLBACK", RED),
+                              ("UNSURE", YELLOW),
+                              ("ENGAGED", GREEN)):
+                if word in line:
+                    line = line.replace(word, BOLD + col + word + RESET, 1)
+                    break
         elif line.startswith("SUSPECT: "):
             line = BOLD + YELLOW + "SUSPECT" + RESET + line[7:]
         elif line.startswith("  verdict"):
@@ -2448,6 +2473,203 @@ def watch_cli(argv):
     watch(pid, engine, dur)
 
 
+# ------------------------------------------------------------------ monitor
+#
+# measure and server mode each take one snapshot; a setup that runs on the
+# GPU now can fall to the CPU an hour later, on a reload the http api never
+# announces, and the next snapshot you happen to take is the only place you
+# would ever see it. monitor closes that window: it sends one controlled
+# probe on a fixed interval to a running llama-server, reads the per
+# request prefill and decode timings the server already returns, and
+# classifies each probe by the same ratio signature the block votes on
+# (prefill under 5x decode is cpu shaped, 15x and over gpu shaped, the band
+# between is unsure). Each probe is one line; a probe that flips the running
+# placement prints a louder line, because a GPU that comes and goes between
+# requests is exactly the failure a single snapshot cannot catch. It
+# launches nothing and kills nothing: the server is the user's, monitor
+# only knocks on it on a timer. The probe reuses measure's fixed prompt, so
+# a short prompt can never make prefill look slow (the trap the whole tool
+# exists to warn about); that is why it reads its own probes and not the
+# user's variable length traffic.
+
+MON_CPU_RATIO = 5.0     # prefill under this many x decode reads cpu shaped
+MON_GPU_RATIO = 15.0    # this and over reads gpu shaped; between is unsure
+MON_EVERY_S = 30.0      # default seconds between probes; each probe is one
+                        # full BENCH_PROMPT completion, so a shorter gap
+                        # puts more real load on the server being watched
+MON_TAG = {"OK": "ENGAGED", "FLAG": "NOT ENGAGED",
+           "WATCH": "UNSURE", "NODATA": "NO DATA"}
+
+
+def monitor_classify(prefill, decode):
+    """One probe's verdict from its two rates, the same signature the
+    server block votes on. Returns (state, ratio): OK when the shape is
+    gpu, FLAG when it is cpu, WATCH in the unsure band, NODATA when a rate
+    is missing (a probe that came back without usable timings convicts
+    nobody)."""
+    if not prefill or not decode:
+        return "NODATA", None
+    ratio = prefill / decode
+    if ratio < MON_CPU_RATIO:
+        return "FLAG", ratio
+    if ratio >= MON_GPU_RATIO:
+        return "OK", ratio
+    return "WATCH", ratio
+
+
+def monitor_summarize(events):
+    """The exit summary from the probe log. events is a list of (state,
+    ratio) in order. Counts the two decisive states, the transitions
+    between them (OK<->FLAG, the intermittent signal a snapshot misses),
+    and the worst prefill/decode ratio seen."""
+    ok = sum(1 for s, _ in events if s == "OK")
+    flag = sum(1 for s, _ in events if s == "FLAG")
+    decisive = [s for s, _ in events if s in ("OK", "FLAG")]
+    trans = sum(1 for a, b in zip(decisive, decisive[1:]) if a != b)
+    ratios = [r for _, r in events if r is not None]
+    return {"n": len(events), "ok": ok, "flag": flag, "transitions": trans,
+            "worst_ratio": min(ratios) if ratios else None}
+
+
+def monitor_line(stamp, i, state, ratio, prefill, decode):
+    """One compact status line per probe, pasteable, colorized by the
+    monitor branch in colorize()."""
+    head = "picchio monitor: {} probe {:<3} {}".format(
+        stamp, i, MON_TAG[state])
+    if state == "NODATA":
+        return head + "  the server returned no usable timings"
+    return "{}  prefill {}, decode {} ({:.1f}x)".format(
+        head, fmt_rate(prefill), fmt_rate(decode), ratio)
+
+
+def monitor_summary_line(summ):
+    """The one line printed when monitor stops: what it saw over the whole
+    session, and the verdict that sets the exit code."""
+    if summ["n"] == 0:
+        return "picchio monitor: no probes completed."
+    parts = ["{} probes".format(summ["n"]),
+             "{} engaged".format(summ["ok"]),
+             "{} on cpu".format(summ["flag"])]
+    if summ["transitions"]:
+        parts.append("{} placement change(s)".format(summ["transitions"]))
+    if summ["worst_ratio"] is not None:
+        parts.append("worst prefill {:.1f}x decode".format(
+            summ["worst_ratio"]))
+    verdict = "SILENT CPU FALLBACK seen" if summ["flag"] \
+        else "ENGAGED throughout"
+    return "picchio monitor: {} - {}".format(verdict, ", ".join(parts))
+
+
+def _mon_secs(flag, val):
+    try:
+        s = float(val)
+    except ValueError:
+        sys.exit("picchio monitor: {} wants a number of seconds.".format(
+            flag))
+    if s <= 0:
+        sys.exit("picchio monitor: {} wants a positive number.".format(flag))
+    return s
+
+
+def _monitor_wait(t0, every, deadline):
+    """Sleep out the rest of one interval after a probe, but never past
+    the --for deadline. Returns False once the deadline has arrived so the
+    loop stops on time instead of one probe late."""
+    target = t0 + every
+    if deadline is not None:
+        target = min(target, deadline)
+    time.sleep(max(0.0, target - time.monotonic()))
+    return deadline is None or time.monotonic() < deadline
+
+
+def monitor(url, every=MON_EVERY_S, duration=None, keep_dir=None):
+    """Probe a running llama-server on a timer and flag any probe whose
+    prefill/decode signature goes cpu shaped. Speaks one line per probe and
+    a louder line whenever the placement flips, never launches or signals
+    the server, and exits 4 the moment any probe caught the gpu not doing
+    the work (0 if it held the whole session)."""
+    ok, why = server_health(url)
+    if not ok:
+        sys.exit("picchio monitor: " + why)
+    ctx = server_ctx(url)
+    sys.stderr.write(
+        "picchio monitor: probing {} every {:.0f} s (ctx {}); "
+        "ctrl-c to stop\n".format(url, every, ctx))
+    events, last_decisive, i = [], None, 0
+    deadline = (time.monotonic() + duration) if duration else None
+    try:
+        while deadline is None or time.monotonic() < deadline:
+            i += 1
+            t0 = time.monotonic()
+            lp = os.path.join(keep_dir, "probe{}.response.json".format(i)) \
+                if keep_dir else None
+            try:
+                p = run_server_pass(url, lp)
+            except (urllib.error.URLError, OSError, ValueError) as e:
+                # a server that stopped answering is an event worth a line,
+                # but not a cpu conviction; keep the timer running so a
+                # restart is picked up on the next tick
+                sys.stderr.write("picchio monitor: probe {} could not reach "
+                                 "the server: {}\n".format(i, e))
+                if not _monitor_wait(t0, every, deadline):
+                    break
+                continue
+            prefill, decode = p["prefill_toks"], p["decode_toks"]
+            state, ratio = monitor_classify(prefill, decode)
+            events.append((state, ratio))
+            sys.stderr.write(colorize(monitor_line(
+                time.strftime("%H:%M:%S"), i, state, ratio, prefill, decode),
+                sys.stderr) + "\n")
+            if state in ("OK", "FLAG"):
+                if last_decisive and state != last_decisive:
+                    sys.stderr.write(colorize(
+                        "picchio monitor: placement changed {} -> {} at "
+                        "probe {}".format(MON_TAG[last_decisive],
+                                          MON_TAG[state], i),
+                        sys.stderr) + "\n")
+                last_decisive = state
+            if not _monitor_wait(t0, every, deadline):
+                break
+    except KeyboardInterrupt:
+        sys.stderr.write("\n")
+    summ = monitor_summarize(events)
+    sys.stderr.write(colorize(monitor_summary_line(summ), sys.stderr) + "\n")
+    sys.exit(4 if summ["flag"] else 0)
+
+
+def monitor_cli(argv):
+    if argv[:1] in (["-h"], ["--help"]):
+        print("usage: picchio.py monitor URL [--every SEC] [--for SEC] "
+              "[--keep-logs DIR]\n"
+              "probe a running llama-server on an interval and flag any\n"
+              "probe whose prefill/decode signature goes cpu shaped: the\n"
+              "intermittent fallback a single snapshot cannot see. never\n"
+              "launches or kills the server.")
+        sys.exit(0)
+    url = keep = None
+    every, dur, i = MON_EVERY_S, None, 0
+    while i < len(argv):
+        a = argv[i]
+        if a == "--every" and i + 1 < len(argv):
+            every, i = _mon_secs("--every", argv[i + 1]), i + 2
+        elif a == "--for" and i + 1 < len(argv):
+            dur, i = _mon_secs("--for", argv[i + 1]), i + 2
+        elif a == "--keep-logs" and i + 1 < len(argv):
+            keep = argv[i + 1]
+            os.makedirs(keep, exist_ok=True)
+            i += 2
+        elif a.startswith(("http://", "https://")) and url is None:
+            url, i = a, i + 1
+        else:
+            sys.exit("picchio monitor: unexpected argument {!r}.\nusage: "
+                     "picchio.py monitor URL [--every SEC] [--for SEC] "
+                     "[--keep-logs DIR]".format(a))
+    if url is None:
+        sys.exit("picchio monitor: give the url of a running llama-server, "
+                 "e.g. picchio.py monitor http://127.0.0.1:8080")
+    monitor(url, every, dur, keep)
+
+
 # --------------------------------------------------------------- ctx sweep
 #
 # One tok/s number is measured at one context depth, almost always a
@@ -2948,7 +3170,7 @@ def plan_cli(argv):
         except (urllib.error.URLError, OSError, ValueError):
             pass
     rows = []
-    for label, note, arg, _size in scan_models():
+    for label, note, arg, _size in scan_models()[0]:
         if note == "gguf":
             n, fb, meta, why = plan_target(arg)
             rows.append(plan_row(n, fb, meta, why, budget, bw))
@@ -3461,6 +3683,30 @@ def selftest():
         synth_watch([30, 35, 28, 40, 33], int(4.0 * gib), 6.0)), None)
     if sm == "GPU MIXED":
         wa_ok += 1
+    # monitor: the per probe signature classifier and the session summary,
+    # both pure, so ci needs no live server
+    mo_ok, mo_all = 0, 4
+    # a gpu shaped probe reads OK, a cpu shaped one FLAG (the same 5x/15x
+    # lines the server block uses), a missing rate convicts nobody
+    if monitor_classify(588.0, 21.1)[0] == "OK" \
+            and monitor_classify(26.8, 12.2)[0] == "FLAG" \
+            and monitor_classify(None, 21.0)[0] == "NODATA":
+        mo_ok += 1
+    # the unsure band is neither: a prefill slow but not cpu slow
+    if monitor_classify(180.0, 20.0)[0] == "WATCH":
+        mo_ok += 1
+    # a session that flipped gpu->cpu->gpu counts two transitions, convicts
+    # on the one cpu probe, and keeps that probe's ratio as the worst
+    flap = monitor_summarize([("OK", 27.0), ("OK", 26.0), ("FLAG", 2.2),
+                              ("OK", 25.0)])
+    if flap["flag"] == 1 and flap["transitions"] == 2 \
+            and abs(flap["worst_ratio"] - 2.2) < 1e-9:
+        mo_ok += 1
+    # an all healthy session names no fallback (the exit 0 shape)
+    steady = monitor_summarize([("OK", 27.0), ("OK", 26.5), ("OK", 28.1)])
+    if steady["flag"] == 0 and steady["transitions"] == 0 \
+            and "ENGAGED throughout" in monitor_summary_line(steady):
+        mo_ok += 1
     # ctx sweep: the slope sentence is exact on synthetic rows, and the
     # committed real sweep replays like a verdict block when present
     sw_ok, sw_all = 0, 2
@@ -3835,7 +4081,7 @@ def selftest():
     # onboarding: the zero-argument entry decision is pure given what the
     # scan found, whether a terminal is attached, and what gets typed. The
     # four paths plus the two edges, none of them touching a tty or a gpu
-    gd_ok, gd_all = 0, 7
+    gd_ok, gd_all = 0, 8
     two = [("qwen3.5:9b", "ollama", "qwen3.5:9b", "5.3 GiB"),
            ("llama-3-8b.gguf", "gguf", "/models/llama-3-8b.gguf",
             "4.6 GiB")]
@@ -3889,6 +4135,15 @@ def selftest():
                          emit) == ("run", "/m/" + longlab) \
             and any("..." in x and "8.0 GiB" in x for x in log):
         gd_ok += 1
+    # 8: models found past the display cap are surfaced, not dropped in
+    # silence; the header counts the true total and a trailer names how
+    # many are hidden, and a typed number still reaches a shown one
+    log, emit = sink()
+    if resolve_direction(two, True, scripted(["1"]), emit, 5) \
+            == ("run", "qwen3.5:9b") \
+            and "7 models found." in log \
+            and any("and 5 more" in x for x in log):
+        gd_ok += 1
     vp_ok, vp_all = 0, 3
     if parse_engine_version("version: 9430 (d48a56ef)") == "b9430":
         vp_ok += 1
@@ -3898,18 +4153,18 @@ def selftest():
     if parse_engine_version("") == "(version unknown)":
         vp_ok += 1
     print("parser fixtures {}/{}, verdict replay {}/{}, compare {}/{}, "
-          "telemetry {}/{}, verify {}/{}, watch {}/{}, sweep {}/{}, "
-          "server {}/{}, linux {}/{}, silent-engine {}/{}, curves {}/{}, "
-          "plan {}/{}, id {}/{}, argv {}/{}, version {}/{}, "
+          "telemetry {}/{}, verify {}/{}, watch {}/{}, monitor {}/{}, "
+          "sweep {}/{}, server {}/{}, linux {}/{}, silent-engine {}/{}, "
+          "curves {}/{}, plan {}/{}, id {}/{}, argv {}/{}, version {}/{}, "
           "onboarding {}/{}".format(
               fx_ok, fx_all, rp_ok, rp_all, cp_ok, cp_all, te_ok, te_all,
-              ve_ok, ve_all, wa_ok, wa_all, sw_ok, sw_all, sv_ok, sv_all,
-              lx_ok, lx_all, se_ok, se_all, rc_ok, rc_all,
+              ve_ok, ve_all, wa_ok, wa_all, mo_ok, mo_all, sw_ok, sw_all,
+              sv_ok, sv_all, lx_ok, lx_all, se_ok, se_all, rc_ok, rc_all,
               pl_ok, pl_all, id_ok, id_all, av_ok, av_all, vp_ok, vp_all,
               gd_ok, gd_all))
     sys.exit(0 if fx_ok == fx_all and rp_ok == rp_all and rp_all
              and cp_ok == cp_all and te_ok == te_all
-             and ve_ok == ve_all and wa_ok == wa_all
+             and ve_ok == ve_all and wa_ok == wa_all and mo_ok == mo_all
              and sw_ok == sw_all and sv_ok == sv_all
              and lx_ok == lx_all and se_ok == se_all and rc_ok == rc_all
              and pl_ok == pl_all and id_ok == id_all and av_ok == av_all
@@ -3965,6 +4220,9 @@ def main():
     if sys.argv[1:2] == ["watch"]:
         watch_cli(sys.argv[2:])
         return
+    if sys.argv[1:2] == ["monitor"]:
+        monitor_cli(sys.argv[2:])
+        return
     if sys.argv[1:2] == ["plan"]:
         plan_cli(sys.argv[2:])
         return
@@ -4017,6 +4275,12 @@ def main():
             "  point the os gpu meter at a running process or the whole\n"
             "  gpu and report whether the gpu is doing the work, without\n"
             "  parsing any engine's output (works for mlx, lm studio, ...)\n"
+            "\n"
+            "monitor mode:\n"
+            "  picchio.py monitor URL [--every SEC] [--for SEC]\n"
+            "  probe a running llama-server on a timer and flag any probe\n"
+            "  whose prefill/decode signature goes cpu shaped: the\n"
+            "  intermittent fallback a single snapshot cannot catch\n"
             "\n"
             "ctx sweep:\n"
             "  picchio.py model.gguf --ctx-sweep [4096,16384,32768]\n"
@@ -4099,16 +4363,16 @@ def main():
         # no direction from argv: the one place a model may be asked for.
         # a terminal on both ends means a person is watching; a pipe or a
         # redirect on either end stays composable and is never asked
-        cands = scan_models()
+        cands, dropped = scan_models()
         interactive = sys.stdin.isatty() and sys.stdout.isatty()
         action, chosen = resolve_direction(
             cands, interactive, _ask_line,
-            lambda line: print(menu_paint(line)))
+            lambda line: print(menu_paint(line)), dropped)
         if action == "run":
             args.model = chosen
         else:
             if action == "print":
-                print_discovery(cands)
+                print_discovery(cands, dropped)
             elif not interactive:
                 print(HINT_NO_MODELS)
             sys.exit(0)

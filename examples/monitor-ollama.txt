@@ -1,0 +1,68 @@
+picchio monitor: probing qwen3.5:9b every 6 s (ctx 4096); ctrl-c to stop
+picchio monitor: 07:01:40 probe 1   ENGAGED  prefill 500.3 tok/s, decode 19.2 tok/s (26.0x)
+picchio monitor: 07:01:48 probe 2   ENGAGED  prefill 712.2 tok/s, decode 19.4 tok/s (36.7x)
+picchio monitor: 07:01:56 probe 3   ENGAGED  prefill 845.8 tok/s, decode 19.5 tok/s (43.3x)
+picchio monitor: baseline locked at 37x prefill/decode for this server; a collapse from it now flags too
+picchio monitor: 07:02:04 probe 4   ENGAGED  prefill 806.5 tok/s, decode 19.3 tok/s (41.7x)
+picchio monitor: 07:02:11 probe 5   ENGAGED  prefill 847.8 tok/s, decode 19.6 tok/s (43.3x)
+picchio monitor: ENGAGED throughout - 5 probes, 5 engaged, 0 on cpu, worst prefill 26.0x decode
+{
+ "tool": "picchio",
+ "version": "0.1.0",
+ "protocol": "mp1",
+ "mode": "ollama",
+ "target": "qwen3.5:9b",
+ "engine": "ollama 0.31.1",
+ "machine": {
+  "os": "macOS 26.5.1",
+  "chip": "Apple M5",
+  "ram_gb": 32
+ },
+ "baseline_ratio": 36.7,
+ "probes": [
+  {
+   "i": 1,
+   "state": "OK",
+   "ratio": 26.0,
+   "prefill": 500.3,
+   "decode": 19.2
+  },
+  {
+   "i": 2,
+   "state": "OK",
+   "ratio": 36.7,
+   "prefill": 712.2,
+   "decode": 19.4
+  },
+  {
+   "i": 3,
+   "state": "OK",
+   "ratio": 43.3,
+   "prefill": 845.8,
+   "decode": 19.5
+  },
+  {
+   "i": 4,
+   "state": "OK",
+   "ratio": 41.7,
+   "prefill": 806.5,
+   "decode": 19.3
+  },
+  {
+   "i": 5,
+   "state": "OK",
+   "ratio": 43.3,
+   "prefill": 847.8,
+   "decode": 19.6
+  }
+ ],
+ "summary": {
+  "probes": 5,
+  "engaged": 5,
+  "cpu": 0,
+  "transitions": 0,
+  "worst_ratio": 26.0
+ },
+ "verdict": "ENGAGED throughout",
+ "exit_code": 0
+}

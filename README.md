@@ -68,7 +68,7 @@ In the table, `picchio` stands for `python3 picchio.py`.
 | `picchio compare A.txt B.txt` | diffs two saved blocks variable by variable, the first config difference takes the blame | [example](examples/compare.txt) |
 | `picchio verify FILE` | flags a pasted block whose own numbers contradict each other | [example](examples/verify-forged.txt) |
 | `picchio watch [PID]` | points the OS GPU meter at a process or the whole GPU, no engine log parsing (macOS) | [example](examples/watch-ollama.txt) |
-| `picchio monitor URL` | probes a running llama-server on a timer, flags any probe whose prefill/decode ratio collapses from that server's own healthy baseline | [example](examples/monitor.txt) |
+| `picchio monitor TARGET` | probes a running llama-server url or ollama tag on a timer, flags any probe whose prefill/decode ratio collapses from that engine's own healthy baseline; `--json` for a pasteable session | [server](examples/monitor.txt) · [ollama+json](examples/monitor-ollama.txt) |
 | `picchio plan [MODEL]` | will it fit, priced from the gguf header; a decode estimate appears once one run is measured | [example](examples/plan-35b.txt) |
 | `picchio id MODEL` | splits the quant label: per tensor type mix, effective bits per weight, KV dtype, experts | [example](examples/id-35b.txt) |
 | `picchio --explain 36` | classifies a number you saw against the lanes measured here (cached rates, no rerun) | [example](examples/explain-36.txt) |

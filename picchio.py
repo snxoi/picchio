@@ -87,6 +87,8 @@ N_PREDICT = 128
 CTX = 4096
 CACHE_PATH = os.path.expanduser("~/.cache/picchio/last.json")
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "127.0.0.1:11434")
+KV_TYPES_RE = re.compile(r"llama_kv_cache: size =.*"
+                         r"K \((\S+)\):.*V \((\S+)\):")
 
 # A fixed prompt of roughly 730 tokens. Short prompts lie: 7 prompt
 # tokens measured 36 tok/s of apparent prefill on the same setup where
@@ -171,7 +173,7 @@ def blank_pass():
         "model_params": None, "model_size": None, "model_bytes": None,
         "threads": None, "cores": None,
         "vram_frac": None, "n_expert": None,
-        "kv_types": None, "tensor_types": None,
+        "kv_types": None, "kv_source": None, "tensor_types": None,
         "free_mib": None, "fit_seen": False, "init_fail": None,
         "prefill_toks": None, "decode_toks": None, "wallclock_toks": None,
     }
@@ -313,8 +315,6 @@ def parse_stderr(text, wall_s):
     # dtype, measured here on b9430 with -ctk q8_0 -ctv q8_0 (the f16
     # default is in every committed fixture). Cached so the id card
     # can cite a dtype this machine has actually run.
-    re_kvtypes = re.compile(r"llama_kv_cache: size =.*"
-                            r"K \((\S+)\):.*V \((\S+)\):")
     # e.g. "llama_model_loader: - type q4_K:  132 tensors": the
     # loader's own per-type census, the engine side of the id cross
     # check against the gguf table walk
@@ -375,9 +375,10 @@ def parse_stderr(text, wall_s):
         m = re_free.search(line)
         if m:
             d["free_mib"] = int(m.group(1))
-        m = re_kvtypes.search(line)
+        m = KV_TYPES_RE.search(line)
         if m:
             d["kv_types"] = [m.group(1), m.group(2)]
+            d["kv_source"] = "llama.cpp stderr"
         m = re_ttype.search(line)
         if m:
             # the loader prints the census once per load and loads
@@ -440,6 +441,111 @@ def ollama_ps_entry(tag):
     return None
 
 
+def ollama_host_is_local():
+    """Runner logs only belong to this machine. Never inspect local logs
+    for a remote OLLAMA_HOST and accidentally attribute their dtype to the
+    remote server."""
+    try:
+        host = urllib.parse.urlsplit("//" + OLLAMA_HOST).hostname
+    except ValueError:
+        return False
+    return host in ("127.0.0.1", "0.0.0.0", "localhost", "::1", "::")
+
+
+def ollama_log_paths():
+    """Readable Ollama server logs, including stdout/stderr redirects.
+
+    The packaged app normally writes under ~/.ollama/logs. A terminal or
+    service manager may redirect `ollama serve` anywhere, so on local hosts
+    its live fd 1/2 targets are the stronger discovery path. Failure to find
+    either is an evidence gap, never permission to assume the configured
+    default dtype.
+    """
+    if not ollama_host_is_local():
+        return []
+    paths = []
+    for pat in (os.path.expanduser("~/.ollama/logs/*.log"),
+                os.path.expanduser("~/Library/Logs/Ollama/*.log")):
+        paths.extend(glob.glob(pat))
+    ps = _cmd_out(["ps", "-axo", "pid=,command="])
+    pids = []
+    for line in ps.splitlines():
+        fields = line.strip().split(None, 1)
+        if len(fields) == 2 and re.search(
+                r"(?:^|/)ollama\s+serve(?:\s|$)", fields[1]):
+            pids.append(fields[0])
+    if sys.platform.startswith("linux"):
+        for pid in pids:
+            for fd in ("1", "2"):
+                try:
+                    paths.append(os.path.realpath("/proc/{}/fd/{}".format(
+                        pid, fd)))
+                except OSError:
+                    pass
+    if shutil.which("lsof"):
+        for pid in pids:
+            for line in _cmd_out(
+                    ["lsof", "-a", "-p", pid, "-d", "1,2", "-Fn"]
+                    ).splitlines():
+                if line.startswith("n/"):
+                    paths.append(line[1:])
+    out = []
+    for path in paths:
+        try:
+            if path not in out and os.path.isfile(path) \
+                    and os.access(path, os.R_OK):
+                out.append(path)
+        except OSError:
+            pass
+    return out
+
+
+def ollama_log_snapshot():
+    """(device, inode, byte offset) per current log, keyed by path."""
+    snap = {}
+    for path in ollama_log_paths():
+        try:
+            st = os.stat(path)
+            snap[path] = (st.st_dev, st.st_ino, st.st_size)
+        except OSError:
+            pass
+    return snap
+
+
+def parse_kv_types(text):
+    """Return the last concrete K/V dtype marker in a runtime log."""
+    found = KV_TYPES_RE.findall(text)
+    return list(found[-1]) if found else None
+
+
+def ollama_kv_since(snap):
+    """Read only bytes appended after a request began, capped at 4 MiB.
+
+    A rotated file starts at zero. The narrow request window is important:
+    Ollama's dtype is global configuration but the evidence cited by `id`
+    is the runner line emitted for the model load picchio just caused.
+    """
+    best = None
+    for path in ollama_log_paths():
+        try:
+            st = os.stat(path)
+            old = snap.get(path)
+            offset = old[2] if old and old[:2] == (st.st_dev, st.st_ino) \
+                and st.st_size >= old[2] else 0
+            if st.st_size <= offset:
+                continue
+            with open(path, "rb") as f:
+                f.seek(offset)
+                text = f.read(4 * 1024 * 1024).decode(
+                    "utf-8", errors="replace")
+            kt = parse_kv_types(text)
+            if kt:
+                best = kt
+        except OSError:
+            pass
+    return best
+
+
 def map_ollama(resp, wall_s, ps):
     d = blank_pass()
     d["wall_s"] = wall_s
@@ -467,6 +573,7 @@ def map_ollama(resp, wall_s, ps):
 
 
 def run_ollama_pass(tag, log_path=None, prompt=BENCH_PROMPT, ctx=CTX):
+    log_snap = ollama_log_snapshot()
     t0 = time.monotonic()
     resp = ollama_api("/api/generate", {
         "model": tag,
@@ -477,7 +584,11 @@ def run_ollama_pass(tag, log_path=None, prompt=BENCH_PROMPT, ctx=CTX):
     wall_s = time.monotonic() - t0
     keep_log(log_path, json.dumps(resp, indent=1))
     ps = ollama_ps_entry(tag)
-    return map_ollama(resp, wall_s, ps), ps
+    d = map_ollama(resp, wall_s, ps)
+    d["kv_types"] = ollama_kv_since(log_snap)
+    if d["kv_types"]:
+        d["kv_source"] = "Ollama runner log"
+    return d, ps
 
 
 def looks_like_tag(s):
@@ -1210,6 +1321,14 @@ def build_rep(passes):
     for key in ("prefill_toks", "decode_toks", "wallclock_toks"):
         med, _, _ = warm_stats(passes, key)
         rep[key] = med or rep.get(key)
+    # Ollama emits its kv line when a runner loads. Pass 1 deliberately
+    # causes that load; warm passes reuse the runner and therefore emit no
+    # second line. Preserve the newest concrete marker across the series.
+    for p in reversed(passes):
+        if p.get("kv_types"):
+            rep["kv_types"] = p["kv_types"]
+            rep["kv_source"] = p.get("kv_source")
+            break
     return rep
 
 
@@ -1311,6 +1430,22 @@ def attribute_why(state, rep, mode, engine_argv):
 
 # --------------------------------------------------------------- diagnosis
 
+def decode_advice(cold_decode, warm_decode):
+    """The decode sentence for a healthy verdict. Normally it quotes the
+    warm median. But when that median fell well below the cold pass, which
+    on an idle machine it never does (the decode rate excludes the load, so
+    cold and warm agree), something shared the machine during the warm
+    passes: the number is contaminated, so the sentence names the swing and
+    says rerun instead of handing out a figure to quote."""
+    if not warm_decode:
+        return ""
+    if cold_decode and warm_decode < 0.75 * cold_decode:
+        return (" Warm decode fell to {:.1f} from the cold pass's {:.1f}; "
+                "the machine was busy, rerun idle before quoting.".format(
+                    warm_decode, cold_decode))
+    return " Quote the warm median decode: {:.1f} tok/s.".format(warm_decode)
+
+
 def diagnose(cold, rep, mode, tele=None):
     """Returns (state, paragraph). State drives the exit code.
 
@@ -1380,9 +1515,7 @@ def diagnose(cold, rep, mode, tele=None):
         if shapes == {"gpu"}:
             para = " and ".join(t for t, _ in votes) \
                 + ": the gpu did the work."
-            if decode:
-                para += (" Quote the warm median decode: {:.1f} "
-                         "tok/s.".format(decode))
+            para += decode_advice(cold["decode_toks"], decode)
             return "HEALTHY", para[0].upper() + para[1:]
         return "NO PLACEMENT EVIDENCE", (
             "The server api exposes no placement, and neither the os "
@@ -1419,9 +1552,7 @@ def diagnose(cold, rep, mode, tele=None):
                 "is CPU shaped. Believe neither.".format(prefill / decode)
             )
         para = "Ollama reports 100% of weights in GPU memory."
-        if decode:
-            para += (" Quote the warm median decode: {:.1f} "
-                     "tok/s.".format(decode))
+        para += decode_advice(cold["decode_toks"], decode)
         if prefill and decode and prefill > 3 * decode:
             para += (" {:.0f} tok/s is prefill: reading, not "
                      "writing.".format(prefill))
@@ -1485,9 +1616,7 @@ def diagnose(cold, rep, mode, tele=None):
                 n, total, prefill / decode)
         )
     para = "The GPU did the work."
-    if decode:
-        para += (" Quote the warm median decode: {:.1f} tok/s.".format(
-            decode))
+    para += decode_advice(cold["decode_toks"], decode)
     if prefill and decode and prefill > 3 * decode:
         para += (" {:.0f} tok/s is prefill: reading speed, not "
                  "writing.".format(prefill))
@@ -2707,7 +2836,7 @@ def monitor(target, mode, every=MON_EVERY_S, duration=None, keep_dir=None,
                 # but not a cpu conviction; keep the timer running so a
                 # restart is picked up on the next tick
                 sys.stderr.write("picchio monitor: probe {} could not reach "
-                                 "the server: {}\n".format(i, e))
+                                 "the engine: {}\n".format(i, e))
                 if not _monitor_wait(t0, every, deadline):
                     break
                 continue
@@ -2732,7 +2861,7 @@ def monitor(target, mode, every=MON_EVERY_S, duration=None, keep_dir=None,
                     baseline = statistics.median(healthy)
                     sys.stderr.write(
                         "picchio monitor: baseline locked at {:.0f}x "
-                        "prefill/decode for this server; a collapse from "
+                        "prefill/decode for this engine; a collapse from "
                         "it now flags too\n".format(baseline))
             if state in ("OK", "FLAG"):
                 if last_decisive and state != last_decisive:
@@ -2887,6 +3016,11 @@ def ctx_sweep(model, mode, binpath, engine_str, model_name, tiers, passes, lp):
     lanes. The first pass of each tier is the cold one and is dropped
     from the warm median, exactly as measure mode does it."""
     rows = []
+    sys.stderr.write(
+        "picchio: ctx sweep = {} full runs ({} tiers x {} passes), each a "
+        "fresh prompt sized to fill its context; this takes minutes, not "
+        "the ~1 min of a single run.\n".format(
+            len(tiers) * passes, len(tiers), passes))
     for ctx in tiers:
         prompt = sweep_prompt(int(ctx * 0.7))  # leave headroom for 128 gen
         ps = []
@@ -3491,19 +3625,24 @@ def id_claim(recipe, name):
 
 def id_kv_note(cache):
     """The kv axis only ever cites a dtype this machine has measured:
-    a run's stderr K/V markers land in the cache, and with none on
-    file the card says not measured instead of assuming f16."""
+    a run's concrete K/V marker lands in the per-model cache, and with
+    none on file the card says not measured instead of assuming f16."""
     kt = (cache or {}).get("kv_types")
     if kt:
+        source = cache.get("kv_source") or "runtime log"
+        control = "OLLAMA_KV_CACHE_TYPE changes it for Ollama" \
+            if source == "Ollama runner log" else \
+            "-ctk / -ctv move it per llama.cpp run"
         return ("a runtime choice, not in the model. K {}, V {} on the "
-                "last measured run here ({}, {}); -ctk / -ctv move it "
-                "per run".format(kt[0], kt[1],
-                                 cache.get("model_name", "?"),
-                                 str(cache.get("stamp", "?"))[:10]))
+                "last measured run for this model and engine ({}, {}, "
+                "via {}); {}".format(
+                    kt[0], kt[1], cache.get("model_name", "?"),
+                    str(cache.get("kv_stamp") or
+                        cache.get("stamp", "?"))[:10], source, control))
     return ("a runtime choice, not in the model, and no measured run "
-            "on this machine has recorded it yet. Measure once "
+            "for this model and engine has recorded it yet. Measure once "
             "(python3 picchio.py MODEL) and the card cites that run; "
-            "-ctk / -ctv move it per run")
+            "a local Ollama run needs readable runner logs")
 
 
 def _id_wrap(label, text):
@@ -3563,8 +3702,9 @@ def id_cli(argv):
         sys.exit("picchio id: usage: picchio.py id MODEL (a .gguf path "
                  "or an ollama tag)")
     arg = argv[0]
-    kv_note = id_kv_note(load_cache())
     if os.path.isfile(arg):
+        kv_note = id_kv_note(cache_for_measurement(
+            load_cache(), measurement_key("llama.cpp", arg), arg))
         name = os.path.basename(arg)
         try:
             with open(arg, "rb") as f:
@@ -3594,6 +3734,8 @@ def id_cli(argv):
     except (urllib.error.URLError, OSError, ValueError):
         sys.exit("picchio id: ollama at {} does not know the model "
                  "{!r}.".format(OLLAMA_HOST, arg))
+    kv_note = id_kv_note(cache_for_measurement(
+        load_cache(), measurement_key("ollama", arg), arg))
     mi = show.get("model_info") or {}
     recipe = LLAMA_FTYPES.get(mi.get("general.file_type")) \
         or (show.get("details") or {}).get("quantization_level")
@@ -3623,7 +3765,31 @@ def selftest():
     here = os.path.dirname(os.path.abspath(__file__))
     rawroot = os.path.join(here, "examples", "raw")
     if not os.path.isdir(rawroot):
-        sys.exit("picchio: no examples/raw next to picchio.py")
+        # single-file install (curl'd picchio.py with no repo tree beside
+        # it): the fixture replay needs examples/raw, but the logic that
+        # ships in this one file can still check itself. These run pure,
+        # no files, so --selftest means something without a clone.
+        flat = [{"t": i * 0.25, "dev": d, "mem": 0, "gpu_w": 0.0}
+                for i, d in enumerate([1, 0, 2, 1])]
+        cpu = dict(blank_pass(), offload_n=0, offload_total=33,
+                   prefill_toks=27.0, decode_toks=12.0)
+        checks = [
+            monitor_classify(588.0, 21.1)[0] == "OK",
+            monitor_classify(26.8, 12.2)[0] == "FLAG",
+            monitor_classify(226.0, 15.0, baseline=60.0)[0] == "FLAG",
+            monitor_target_mode("qwen3.5:9b") == "ollama",
+            monitor_target_mode("http://x:8080") == "server",
+            "rerun idle" in decode_advice(19.6, 10.3),
+            decode_advice(20.0, 21.1).startswith(" Quote"),
+            watch_verdict(watch_summary(flat), None)[0] == "GPU IDLE",
+            parse_engine_version("version: 9430 (d48a56ef)") == "b9430",
+            diagnose(cpu, cpu, "llama.cpp")[0] == "SILENT CPU FALLBACK",
+        ]
+        n_ok = sum(1 for c in checks if c)
+        print("single-file mode (no examples/raw): logic self-checks "
+              "{}/{}; clone the repo for the full fixture replay".format(
+                  n_ok, len(checks)))
+        sys.exit(0 if n_ok == len(checks) else 1)
     fx_ok = fx_all = rp_ok = rp_all = 0
     for name in sorted(os.listdir(rawroot)):
         d = os.path.join(rawroot, name)
@@ -3913,7 +4079,7 @@ def selftest():
     # server endpoint judge: no engine claim exists over http, so the
     # two witnesses (os meter, speed signature) vote through the real
     # diagnose path; the synthetic telemetry timelines above are reused
-    sv_ok, sv_all = 0, 4
+    sv_ok, sv_all = 0, 5
     sfx = blank_pass()
     sfx.update(prefill_toks=560.0, decode_toks=20.0)  # 28x, gpu shaped
     st, para = diagnose(sfx, sfx, "server", busy)
@@ -3930,6 +4096,14 @@ def selftest():
     midr = dict(sfx, prefill_toks=200.0, decode_toks=20.0)  # 10x dead zone
     st, para = diagnose(midr, midr, "server", None)
     if st == "NO PLACEMENT EVIDENCE" and "placement is not" in para:
+        sv_ok += 1
+    # a warm decode that collapsed below the cold pass is contaminated:
+    # placement stays HEALTHY, but the quotable number is withheld with a
+    # rerun note instead of handing out a busy-machine figure
+    st, para = diagnose(dict(sfx, decode_toks=20.0),
+                        dict(sfx, decode_toks=10.0), "server", busy)
+    if st == "HEALTHY" and "rerun idle" in para \
+            and "Quote the warm median" not in para:
         sv_ok += 1
     # linux parser: the four graduated 4090 stderr shapes, each pinned
     # on the fields the diagnosis reads (all captured on b9430 CUDA and
@@ -4116,7 +4290,7 @@ def selftest():
     # same walk, account and expert arithmetic used live (the big real
     # files stay out of ci; they are the manual acceptance step). The
     # engine side of the cross check reads the committed real stderr.
-    id_ok, id_all = 0, 6
+    id_ok, id_all = 0, 9
 
     def synth_id_img(specs, kvs):
         # a minimal legal gguf v3 image: kv section, tensor table,
@@ -4213,6 +4387,34 @@ def selftest():
     except ValueError:
         pass
     if ok6:
+        id_ok += 1
+    # 7: Ollama's runner line has the same concrete K/V markers even
+    #    though /api/generate and /api/ps do not expose dtype fields
+    if parse_kv_types(
+            "llama_kv_cache: size = 128.00 MiB (4096 cells), "
+            "K (q8_0): 64.00 MiB, V (f16): 64.00 MiB") \
+            == ["q8_0", "f16"]:
+        id_ok += 1
+    # 8: only the cold Ollama pass loads a runner and writes that line;
+    #    aggregation must carry its evidence over the warm last pass
+    kp1, kp2 = blank_pass(), blank_pass()
+    kp1["kv_types"] = ["f16", "f16"]
+    kp1["kv_source"] = "Ollama runner log"
+    kr = build_rep([kp1, kp2])
+    if kr["kv_types"] == ["f16", "f16"] \
+            and kr["kv_source"] == "Ollama runner log":
+        id_ok += 1
+    # 9: identity cards select an exact model+engine partition and never
+    #    borrow the global last run from another model
+    ck = measurement_key("ollama", "qwen3.5:9b")
+    cr = {"model_name": "other:latest", "kv_types": ["q4_0", "q4_0"],
+          "measurement_key": measurement_key("ollama", "other:latest"),
+          "measurements": {ck: {"model_name": "qwen3.5:9b",
+                                "kv_types": ["f16", "f16"]}}}
+    if cache_for_measurement(cr, ck, "qwen3.5:9b")["kv_types"] \
+            == ["f16", "f16"] and cache_for_measurement(
+                cr, measurement_key("ollama", "missing:latest"),
+                "missing:latest") is None:
         id_ok += 1
     # argv split: the `--` passthrough is cut by hand before argparse,
     # so its semantics cannot vary with the interpreter (3.9.6 and
@@ -4348,11 +4550,62 @@ def split_engine_args(argv):
     return argv[:cut], argv[cut + 1:]
 
 
-def save_cache(payload):
+def measurement_key(mode, model):
+    """Stable cache partition for one model on one engine surface."""
+    if mode == "ollama":
+        return "ollama@{}:{}".format(OLLAMA_HOST, model)
+    if mode == "server":
+        return "llama-server:{}".format(model.rstrip("/"))
+    return "llama.cpp:{}".format(os.path.realpath(model))
+
+
+def cache_for_measurement(cache, key, model=None):
+    """Select evidence for this model/engine, with a safe legacy fallback.
+
+    Old cache files held only the global last run. They remain usable only
+    when their model name plainly matches; a run for another model must
+    never supply an identity card's kv dtype.
+    """
+    if not isinstance(cache, dict):
+        return None
+    records = cache.get("measurements")
+    if isinstance(records, dict) and isinstance(records.get(key), dict):
+        return records[key]
+    if cache.get("measurement_key") == key:
+        return cache
+    if not cache.get("measurement_key") and model:
+        names = {str(model), os.path.basename(str(model))}
+        if cache.get("model_name") in names:
+            return cache
+    return None
+
+
+def save_cache(payload, key=None):
     try:
+        payload = dict(payload)
+        old = load_cache() or {}
+        records = old.get("measurements")
+        records = dict(records) if isinstance(records, dict) else {}
+        if key:
+            previous = records.get(key)
+            # A runner can remain resident or its service logs can be
+            # unreadable. Keep the last observed dtype, with its own stamp,
+            # instead of erasing valid model-specific evidence.
+            if not payload.get("kv_types") and isinstance(previous, dict) \
+                    and previous.get("kv_types"):
+                for field in ("kv_types", "kv_source", "kv_stamp"):
+                    payload[field] = previous.get(field)
+            payload["measurement_key"] = key
+            records.pop(key, None)
+            records[key] = dict(payload)
+            while len(records) > 32:
+                records.pop(next(iter(records)))
+            payload["measurements"] = records
         os.makedirs(os.path.dirname(CACHE_PATH), exist_ok=True)
-        with open(CACHE_PATH, "w") as f:
+        tmp = CACHE_PATH + ".tmp.{}".format(os.getpid())
+        with open(tmp, "w") as f:
             json.dump(payload, f, indent=1)
+        os.replace(tmp, CACHE_PATH)
     except OSError:
         pass
 
@@ -4657,8 +4910,9 @@ def main():
                 server_props(binpath).get("model_path") or "")
         except OSError:
             pass
+    stamp = time.strftime("%Y-%m-%d %H:%M")
     save_cache({
-        "stamp": time.strftime("%Y-%m-%d %H:%M"),
+        "stamp": stamp,
         "model_name": model_name,
         "machine": "{}, {} GB".format(mach["chip"], mach["ram_gb"] or "?"),
         "protocol": PROTOCOL,
@@ -4669,10 +4923,13 @@ def main():
         "model_bytes": rep.get("model_bytes"),
         "moe": (bool(rep["n_expert"]) if rep.get("n_expert") is not None
                 else None),
-        # the runtime kv dtype this run actually used (llama.cpp
-        # stderr only); the id card cites it rather than assuming f16
+        # The runtime kv dtype this run actually used: llama.cpp stderr
+        # or, on a local Ollama host, bytes newly appended to the runner
+        # log during this request. The id card never assumes a default.
         "kv_types": rep.get("kv_types"),
-    })
+        "kv_source": rep.get("kv_source"),
+        "kv_stamp": stamp if rep.get("kv_types") else None,
+    }, measurement_key(mode, args.model))
 
     if args.json:
         print(json.dumps({"machine": mach, "engine": engine_str,
@@ -4688,4 +4945,18 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except SystemExit as e:
+        # the exit-code table defines 2 as "could not run"; a bare
+        # sys.exit("message") anywhere would otherwise leave python's
+        # default 1, which the table never defines, so a caller cannot
+        # tell a run failure from anything else. Integer codes pass
+        # through untouched (0/2/3/4/5, argparse's own 2 on a usage
+        # error, a guarded child's passed-through code); only a string
+        # message, which always means we stopped before a verdict, is
+        # remapped to 2 after printing it.
+        if isinstance(e.code, str):
+            sys.stderr.write(e.code.rstrip("\n") + "\n")
+            raise SystemExit(2)
+        raise

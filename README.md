@@ -16,16 +16,14 @@
 
 <img src="assets/picchio-demo.svg" width="600" alt="animated terminal replay: python3 picchio.py finds two models, runs three passes, and prints the 15 line verdict block, verdict HEALTHY">
 
-<p>A real run, replayed. Time compressed.</p>
-
 </div>
 
 Most GPU speed claims are one tok/s number. That number can be
-correct and still tell you the wrong story. Three of those
-stories, measured here, each one command:
+correct and still tell you the wrong story. Three failure modes,
+each one command:
 
 - Four quantizations of the same Qwen3.5-9B, all labeled Q4_K_M,
-  measure 5.02, 5.07 and 5.27 bits per weight
+  measure 5.02, 5.02, 5.07 and 5.27 bits per weight
   ([the quant label](#the-quant-label)).
 - Losing the GPU cost prefill 22x and decode under 2x on the same
   model and file ([three lanes](#three-lanes)).
@@ -213,8 +211,7 @@ go to the top of the pile.
 
 The 35B result is mostly a load-time problem. 13 of the first
 pass's 19 seconds went to reading 20.6 GiB of weights. The
-3B-active MoE still decodes 1.6x faster than the dense 9B. A
-background download cut decode roughly in half.
+3B-active MoE still decodes 1.6x faster than the dense 9B.
 
 ## Limits
 
